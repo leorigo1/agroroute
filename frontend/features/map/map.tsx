@@ -23,6 +23,13 @@ export default function Map() {
         url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
       />
 
+      {/* Camada de nomes das cidades */}
+      <TileLayer
+        url="https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png"
+        attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+        opacity={0.8}
+      />
+
       <DrawControl />
     </MapContainer>
   );

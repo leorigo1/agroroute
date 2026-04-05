@@ -2,15 +2,15 @@ version: "3.9"
 
 services:
 
-  frontend:
-    build: ./frontend
-    container_name: next_app
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend:/app
-    depends_on:
-      - backend
+ # frontend:
+  #  build: ./frontend
+  #  container_name: next_app
+  #  ports:
+  #    - "3000:3000"
+  #  volumes:
+  #    - ./frontend:/app
+  #  depends_on:
+  #    - backend
 
   backend:
     build: ./backend-fastapi
