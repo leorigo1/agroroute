@@ -10,7 +10,7 @@ import 'leaflet-draw/dist/leaflet.draw.css';
 export default function Map() {
   return (
     <MapContainer
-      center={[-30.03, -51.23]} // Porto Alegre
+      center={[-25.792934, -53.684604]}
       zoom={13}
       minZoom={10}
       maxZoom={18}

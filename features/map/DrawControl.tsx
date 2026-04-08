@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet-draw';
+import generateWorkingPolygon from './generateWorkingPolygon';
 
 export default function DrawControl() {
   const map = useMap();
@@ -21,10 +22,10 @@ export default function DrawControl() {
       draw: {
         polygon: {
           shapeOptions: {
-            color: 'coral',
+            color: 'red',
             weight: 3,
             fillColor: 'red',
-            fillOpacity: 0.2,
+            fillOpacity: 0.1,
             noClip: false,
             bubblingMouseEvents: true,
           },
@@ -45,9 +46,35 @@ export default function DrawControl() {
 
       const layer = event.layer;
       drawnItems.addLayer(layer);
-
       const geojson = layer.toGeoJSON();
-      console.log('GeoJSON:', geojson);
+
+      //Desenha os pontos do polígono
+      geojson.geometry.coordinates[0].map((coord: number[]) => {
+        console.log('Coordenada:', coord);
+        const [lng, lat] = coord;
+        L.circleMarker([lat, lng], {
+          radius: 5,
+          color: 'white',
+          fillColor: 'red',
+          fillOpacity: 0.1,
+        }).addTo(map);
+      })
+
+      // Gerar o polígono da area util de trabalho
+      const areaUtil = generateWorkingPolygon(geojson.geometry.coordinates[0], 20);
+      if (areaUtil) {
+        const latlngs = areaUtil.map(([lng, lat]: number[]) => [lat, lng]);
+        L.polygon(latlngs, {
+          color: 'chartreuse',
+          weight: 2,
+          fillColor: 'chartreuse',
+          fillOpacity: 0.1,
+        }).addTo(map);
+      }
+
+
+
+
     });
 
     // cleanup
@@ -58,3 +85,8 @@ export default function DrawControl() {
 
   return null;
 }
+
+
+
+
+
