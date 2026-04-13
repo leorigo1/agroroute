@@ -20,7 +20,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql://user:password@db:5432/meu_db
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/agro_db
 
   db:
     image: postgis/postgis:15-3.4

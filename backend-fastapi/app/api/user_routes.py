@@ -19,7 +19,7 @@ def get_db():
     finally:
         db.close()
 
-# 👤 criar usuário
+#criar usuário
 @router.post("/")
 def create_user(email: str, password: str, db: Session = Depends(get_db)):
 
@@ -33,7 +33,7 @@ def create_user(email: str, password: str, db: Session = Depends(get_db)):
 
     return {"id": user.id, "email": user.email}
 
-# 📄 listar usuários
+#listar usuários
 @router.get("/")
 def list_users(db: Session = Depends(get_db)):
     users = db.query(User).all()

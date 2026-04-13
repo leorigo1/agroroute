@@ -3,3 +3,9 @@ to run docker application or apply changes:
 
 DB Manager of Project:
   DBeaver
+
+
+adicionar: requirements, .ven, docker, e pytest commands
+adicionar documentacao
+adicionar demais comandos
+
