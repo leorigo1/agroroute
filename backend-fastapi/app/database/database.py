@@ -2,6 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.exc import OperationalError
 import time
+import psycopg2
 
 DATABASE_URL = "postgresql://postgres:postgres@db:5432/agro_db"
 
