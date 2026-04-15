@@ -1,0 +1,39 @@
+version: "3.9"
+
+services:
+
+ # frontend:
+  #  build: ./frontend
+  #  container_name: next_app
+  #  ports:
+  #    - "3000:3000"
+  #  volumes:
+  #    - ./frontend:/app
+  #  depends_on:
+  #    - backend
+
+  backend:
+    build: ./backend-fastapi
+    container_name: fastapi_app
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/agro_db
+
+  db:
+    image: postgis/postgis:15-3.4
+    container_name: postgres_postgis
+    restart: always
+    environment:
+      POSTGRES_DB: agro_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
