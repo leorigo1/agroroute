@@ -4,7 +4,8 @@ from sqlalchemy import text
 
 from app.api.routes import router as main_router
 from app.api.user_routes import router as user_router
-from app.api.field_routes import route as field_routes
+from app.api.auth_routes import router as auth_router
+from app.api.field_routes import router as field_router
 
 from app.database.database import engine, wait_for_db
 from app.database.database import Base
