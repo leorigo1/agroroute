@@ -1,8 +1,11 @@
 "use client";
  
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { login } from "@/features/auth/authService";
  
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -14,12 +17,12 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
  
-    // Simula autenticação — substitua pela sua lógica real
     try {
-      await new Promise((res) => setTimeout(res, 1200));
-      // await signIn("credentials", { email, password, callbackUrl: "/dashboard" });
-      console.log("Login:", { email, password });
-    } catch {
+      const data = await login({ email, password });
+      localStorage.setItem("agroroute_token", data.access_token);
+      router.replace("/");
+    } catch (err) {
+      console.error(err);
       setError("E-mail ou senha inválidos. Tente novamente.");
     } finally {
       setLoading(false);
