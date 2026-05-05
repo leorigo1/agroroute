@@ -20,6 +20,7 @@ export default function LoginPage() {
     try {
       const data = await login({ email, password });
       localStorage.setItem("agroroute_token", data.access_token);
+      window.dispatchEvent(new Event("agroroute-auth-change"));
       router.replace("/");
     } catch (err) {
       console.error(err);

@@ -4,7 +4,6 @@ import { useEffect } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet-draw';
-import generateWorkingPolygon from './generateWorkingPolygon';
 import { createField, calculateRoute } from '@/features/fields/fieldService';
 
 export default function DrawControl() {
@@ -58,18 +57,6 @@ export default function DrawControl() {
           fillOpacity: 0.1,
         }).addTo(map);
       });
-
-      // polígono de área útil de trabalho
-      const areaUtil = generateWorkingPolygon(coordinates, 20);
-      if (areaUtil) {
-        const latlngs = areaUtil.map(([lng, lat]: number[]) => [lat, lng]);
-        L.polygon(latlngs as L.LatLngExpression[], {
-          color: 'chartreuse',
-          weight: 2,
-          fillColor: 'chartreuse',
-          fillOpacity: 0.1,
-        }).addTo(map);
-      }
 
       // Integração com a API: criar campo e calcular rota
       try {
