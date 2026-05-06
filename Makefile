@@ -15,6 +15,7 @@ help:
 	@echo "  make db-reset          # drop tables (rotas/fields/users) no Postgres do Docker"
 	@echo "  make test-back         # roda testes do backend no Docker (inclui test_models.py)"
 	@echo "  make front             # roda o frontend (npm run dev)"
+	@echo "  make run             	# roda frontend e backend juntos (make front & make up)"
 
 up:
 	$(COMPOSE) up --build
@@ -37,3 +38,9 @@ test-back:
 
 front:
 	cd frontend && npm run dev
+
+
+run:
+	make front & make up
+	
+	
