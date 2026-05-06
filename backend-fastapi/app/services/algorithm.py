@@ -86,8 +86,8 @@ def generate_swaths(
     angle: float,
 ) -> list[list[tuple[float, float]]]:
     """
-    Gera faixas paralelas dentro do polígono no ângulo dado.
-    Cada faixa é uma lista de pontos (x, y) em metros.
+    Gera faixas paralelas dentro do polígono no ângulo dado
+    Cada faixa é uma lista de pontos (x, y) em metros
 
     Processo:
     1. Rotaciona o polígono para alinhar com o ângulo ótimo
@@ -167,7 +167,6 @@ def nearest_neighbor(
 
 
 # PASSO 4 — 2-OPT: MELHORAR A SEQUÊNCIA
-
 def two_opt(
     swaths: list[list[tuple[float, float]]],
 ) -> list[list[tuple[float, float]]]:
@@ -210,10 +209,7 @@ def two_opt(
     return best
 
 
-# ─────────────────────────────────────────────
 # PASSO 5 — MÉTRICAS
-# ─────────────────────────────────────────────
-
 def calculate_metrics(
     swaths: list[list[tuple[float, float]]],
     speed_kmh: float,
@@ -235,10 +231,7 @@ def calculate_metrics(
     return round(total_m, 2), round(time_min, 2), round(fuel_liters, 2)
 
 
-# ─────────────────────────────────────────────
 # FUNÇÃO PÚBLICA — chamada pelo endpoint
-# ─────────────────────────────────────────────
-
 def plan_coverage_route(
     polygon_lonlat: Polygon,
     working_width_m: float,

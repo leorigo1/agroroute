@@ -4,6 +4,7 @@ tests/test_models.py
 Testa os models SQLAlchemy usando banco PostgreSQL no docker.
 """
 
+import os
 import pytest
 from sqlalchemy import create_engine, text, event
 from sqlalchemy.orm import sessionmaker
@@ -14,7 +15,7 @@ from app.models.field_model import Field
 from app.models.routes_model import Route
 
 
-DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/agro_db"
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/agro_db")
 
 @pytest.fixture(scope="module")
 def engine():
