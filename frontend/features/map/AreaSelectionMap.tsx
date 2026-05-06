@@ -153,9 +153,8 @@ export default function AreaSelectionMap() {
     if (!routeLayer) return;
 
     routeLayer.clearLayers();
-    route?.swaths?.forEach((swath) => {
-      const coords = swath.coordinates;
-      if (!coords || coords.length < 2) return;
+    route?.swaths?.forEach((coords) => {
+      if (coords.length < 2) return;
 
       L.polyline(
         coords.map(([lng, lat]) => [lat, lng] as [number, number]),

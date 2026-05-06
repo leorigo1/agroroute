@@ -8,9 +8,15 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { calculateRoute, createField, RouteResponse } from '@/features/fields/fieldService';
+import {
+  calculateRoute,
+  createField,
+  CreateFieldPayload,
+  RouteResponse,
+} from '@/features/fields/fieldService';
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+type FieldSettings = Omit<CreateFieldPayload, 'coordinates'>;
 
 interface AreaSelection {
   coordinates: number[][];
@@ -29,7 +35,7 @@ interface NewAreaSelectionContextValue {
   undoToken: number;
   cancelSelection: () => void;
   requestUndoPoint: () => void;
-  saveSelection: () => Promise<void>;
+  saveSelection: (fieldSettings: FieldSettings) => Promise<void>;
   setSelection: (selection: AreaSelection | null) => void;
   startSelection: () => void;
 }
@@ -74,22 +80,16 @@ export function NewAreaSelectionProvider({ children }: { children: ReactNode }) 
     setUndoToken((token) => token + 1);
   }, []);
 
-  const saveSelection = useCallback(async () => {
+  const saveSelection = useCallback(async (fieldSettings: FieldSettings) => {
     if (!selection?.isClosed || !selection.coordinates.length) return;
-
-    const selectedPoints = selection.coordinates.slice(0, -1);
-    window.alert(JSON.stringify(selectedPoints, null, 2));
 
     setSaveStatus('saving');
     setSaveError(null);
 
     try {
       const field = await createField({
-        name: `Area ${new Date().toISOString()}`,
+        ...fieldSettings,
         coordinates: selection.coordinates,
-        working_width: 6,
-        speed_kmh: 8,
-        fuel_per_km: 2.5,
       });
       const calculatedRoute = await calculateRoute(field.id);
 

@@ -71,9 +71,8 @@ export default function DrawControl() {
         const route = await calculateRoute(field.id);
 
         if (route?.swaths?.length) {
-          route.swaths.forEach((swath) => {
-            const coords = swath.coordinates;
-            if (!coords || coords.length < 2) return;
+          route.swaths.forEach((coords) => {
+            if (coords.length < 2) return;
             const latlngs = coords.map(([lon, lat]: number[]) => [lat, lon] as [number, number]);
             L.polyline(latlngs, {
               color: '#FFD700',

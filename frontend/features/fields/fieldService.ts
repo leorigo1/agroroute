@@ -15,13 +15,8 @@ export interface FieldResponse {
   [key: string]: unknown;
 }
 
-export interface RouteSwath {
-  coordinates: number[][];
-  [key: string]: unknown;
-}
-
 export interface RouteResponse {
-  swaths: RouteSwath[];
+  swaths: number[][][];
   total_distance_m?: number;
   estimated_time_min?: number;
   estimated_fuel_liters?: number;
