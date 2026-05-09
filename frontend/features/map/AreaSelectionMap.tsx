@@ -25,6 +25,7 @@ const STRAIGHT_PATH_STYLE: L.PolylineOptions = {
   lineCap: 'round',
   lineJoin: 'round',
   opacity: 0.9,
+  smoothFactor: 0.15,
   weight: 3,
 };
 
@@ -40,6 +41,7 @@ const INNER_BOUNDARY_STYLE: L.PolylineOptions = {
   lineCap: 'round',
   lineJoin: 'round',
   opacity: 0.95,
+  smoothFactor: 0.15,
   weight: 2,
 };
 
@@ -97,7 +99,10 @@ export default function AreaSelectionMap() {
           color: '#f97316',
           fillColor: '#22c55e',
           fillOpacity: 0.22,
+          lineCap: 'round',
+          lineJoin: 'round',
           opacity: 0.95,
+          smoothFactor: 0.15,
           weight: 3,
         }).addTo(drawnItems);
 
@@ -115,7 +120,10 @@ export default function AreaSelectionMap() {
       } else {
         L.polyline(path, {
           color: '#f97316',
+          lineCap: 'round',
+          lineJoin: 'round',
           opacity: 0.95,
+          smoothFactor: 0.15,
           weight: 3,
         }).addTo(drawnItems);
       }
@@ -294,7 +302,7 @@ function getSmoothPathOptions(workingWidthMeters?: number): SmoothPathOptions {
   const headlandWidth = getHeadlandWidthMeters(implementWidth);
 
   return {
-    curveResolutionMeters: Math.max(implementWidth / 8, 0.5),
+    curveResolutionMeters: Math.max(implementWidth / 12, 0.3),
     minTurningRadiusMeters: headlandWidth / 2,
   };
 }
@@ -308,7 +316,7 @@ function buildConstrainedConnectors(
 ): LatLngPoint[][] {
   const implementWidth = Math.max(workingWidthMeters ?? 6, 1);
   const headlandWidth = getHeadlandWidthMeters(implementWidth);
-  const resolution = Math.max(implementWidth / 8, 0.5);
+  const resolution = Math.max(implementWidth / 12, 0.3);
   const radiusCandidates = [
     headlandWidth / 2,
     headlandWidth * 0.45,

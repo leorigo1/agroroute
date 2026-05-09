@@ -28,6 +28,7 @@ const STRAIGHT_PATH_STYLE: L.PolylineOptions = {
   lineCap: 'round',
   lineJoin: 'round',
   opacity: 0.9,
+  smoothFactor: 0.35,
   weight: 3,
 };
 
@@ -43,6 +44,7 @@ const INNER_BOUNDARY_STYLE: L.PolylineOptions = {
   lineCap: 'round',
   lineJoin: 'round',
   opacity: 0.95,
+  smoothFactor: 0.35,
   weight: 2,
 };
 
@@ -68,11 +70,14 @@ export default function DrawControl() {
         polygon: {
           shapeOptions: {
             color: 'red',
-            weight: 3,
             fillColor: 'red',
             fillOpacity: 0.1,
+            lineCap: 'round',
+            lineJoin: 'round',
             noClip: false,
             bubblingMouseEvents: true,
+            smoothFactor: 0.35,
+            weight: 3,
           },
         },
         rectangle: false,

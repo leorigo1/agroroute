@@ -4,7 +4,9 @@ import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { MapContainer, TileLayer } from 'react-leaflet';
 import { useMap } from 'react-leaflet';
+import AreaDetailMap from './AreaDetailMap';
 import AreaSelectionMap from './AreaSelectionMap';
+import HomeFieldsMap from './HomeFieldsMap';
 
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
@@ -35,6 +37,10 @@ function MapResizeHandler() {
 }
 
 export default function Map() {
+  const pathname = usePathname();
+  const areaDetailMatch = pathname.match(/^\/area\/([^/]+)$/);
+  const areaDetailId = areaDetailMatch?.[1];
+
   return (
     <MapContainer
       center={[-25.792934, -53.684604]}
@@ -58,6 +64,8 @@ export default function Map() {
       />
 
       <MapResizeHandler />
+      {pathname === '/' ? <HomeFieldsMap /> : null}
+      {areaDetailId ? <AreaDetailMap fieldId={areaDetailId} /> : null}
       <AreaSelectionMap />
     </MapContainer>
   );

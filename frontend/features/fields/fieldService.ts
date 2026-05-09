@@ -11,7 +11,10 @@ export interface CreateFieldPayload {
 export interface FieldResponse {
   id: string | number;
   name: string;
-  coordinates: number[][];
+  coordinates?: number[][];
+  working_width: number;
+  speed_kmh?: number;
+  fuel_per_km?: number;
   [key: string]: unknown;
 }
 
@@ -62,6 +65,49 @@ export async function calculateRoute(fieldId: string | number): Promise<RouteRes
   if (!res.ok) {
     const detail = await res.text().catch(() => '');
     throw new Error(`Falha ao calcular rota (${res.status}): ${detail}`);
+  }
+  return res.json();
+}
+
+export async function listFields(): Promise<FieldResponse[]> {
+  const res = await fetch(`${API_URL}/fields/`, {
+    method: 'GET',
+    headers: getHeaders(),
+  });
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(`Falha ao listar talhoes (${res.status}): ${detail}`);
+  }
+  return res.json();
+}
+
+export async function getField(fieldId: string | number): Promise<FieldResponse> {
+  const res = await fetch(`${API_URL}/fields/${fieldId}`, {
+    method: 'GET',
+    headers: getHeaders(),
+  });
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(`Falha ao buscar talhao (${res.status}): ${detail}`);
+  }
+  return res.json();
+}
+
+export async function getRoute(fieldId: string | number): Promise<RouteResponse | null> {
+  const res = await fetch(`${API_URL}/fields/${fieldId}/route`, {
+    method: 'GET',
+    headers: getHeaders(),
+  });
+
+  if (res.status === 404) {
+    return null;
+  }
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(`Falha ao buscar rota (${res.status}): ${detail}`);
   }
   return res.json();
 }

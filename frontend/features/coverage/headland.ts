@@ -50,6 +50,36 @@ export function buildInnerBoundaryCoordinates(
   return null;
 }
 
+export function buildOuterBoundaryFromInnerCoordinates(
+  innerCoordinates: number[][],
+  workingWidthMeters: number,
+): number[][] | null {
+  const closedCoordinates = closeRing(innerCoordinates);
+
+  if (closedCoordinates.length < 4) return null;
+
+  const headlandWidthMeters = getHeadlandWidthMeters(workingWidthMeters);
+  const sourcePolygon = polygon([closedCoordinates]);
+  const outer = buffer(sourcePolygon, headlandWidthMeters * METERS_TO_KILOMETERS, {
+    units: 'kilometers',
+  });
+
+  if (!outer) return null;
+
+  const geometry = outer.geometry;
+
+  if (geometry.type === 'Polygon') {
+    return normalizeRing(geometry.coordinates[0]);
+  }
+
+  if (geometry.type === 'MultiPolygon') {
+    const largestPolygon = pickLargestPolygon(geometry);
+    return largestPolygon ? normalizeRing(largestPolygon.coordinates[0]) : null;
+  }
+
+  return null;
+}
+
 export function buildHeadlandCoverageRings(
   coordinates: number[][],
   workingWidthMeters: number,
