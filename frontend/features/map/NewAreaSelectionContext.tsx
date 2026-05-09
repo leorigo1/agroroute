@@ -14,6 +14,7 @@ import {
   CreateFieldPayload,
   RouteResponse,
 } from '@/features/fields/fieldService';
+import { buildInnerBoundaryCoordinates } from '@/features/coverage/headland';
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 type FieldSettings = Omit<CreateFieldPayload, 'coordinates'>;
@@ -33,10 +34,12 @@ interface NewAreaSelectionContextValue {
   saveStatus: SaveStatus;
   selection: AreaSelection | null;
   undoToken: number;
+  workingWidthMeters: number;
   cancelSelection: () => void;
   requestUndoPoint: () => void;
   saveSelection: (fieldSettings: FieldSettings) => Promise<void>;
   setSelection: (selection: AreaSelection | null) => void;
+  setWorkingWidthMeters: (workingWidthMeters: number) => void;
   startSelection: () => void;
 }
 
@@ -51,6 +54,7 @@ export function NewAreaSelectionProvider({ children }: { children: ReactNode }) 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [selection, setSelectionState] = useState<AreaSelection | null>(null);
   const [undoToken, setUndoToken] = useState(0);
+  const [workingWidthMeters, setWorkingWidthMeters] = useState(6);
 
   const setSelection = useCallback((nextSelection: AreaSelection | null) => {
     setSelectionState(nextSelection);
@@ -87,13 +91,27 @@ export function NewAreaSelectionProvider({ children }: { children: ReactNode }) 
     setSaveError(null);
 
     try {
+      const innerBoundaryCoordinates = buildInnerBoundaryCoordinates(
+        selection.coordinates,
+        fieldSettings.working_width,
+      );
+
+      if (!innerBoundaryCoordinates) {
+        throw new Error('A bordadura consumiu toda a area selecionada. Reduza a largura de trabalho ou aumente o talhao.');
+      }
+
       const field = await createField({
         ...fieldSettings,
-        coordinates: selection.coordinates,
+        coordinates: innerBoundaryCoordinates,
       });
       const calculatedRoute = await calculateRoute(field.id);
 
-      setRoute(calculatedRoute);
+      setRoute({
+        ...calculatedRoute,
+        original_coordinates: selection.coordinates,
+        planning_coordinates: innerBoundaryCoordinates ?? undefined,
+        working_width: fieldSettings.working_width,
+      });
       setSaveStatus('saved');
       setIsSelecting(false);
     } catch (error) {
@@ -115,8 +133,10 @@ export function NewAreaSelectionProvider({ children }: { children: ReactNode }) 
       saveStatus,
       selection,
       setSelection,
+      setWorkingWidthMeters,
       startSelection,
       undoToken,
+      workingWidthMeters,
     }),
     [
       cancelToken,
@@ -132,6 +152,7 @@ export function NewAreaSelectionProvider({ children }: { children: ReactNode }) 
       setSelection,
       startSelection,
       undoToken,
+      workingWidthMeters,
     ],
   );
 

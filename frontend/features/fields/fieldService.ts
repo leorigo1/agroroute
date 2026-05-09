@@ -20,6 +20,9 @@ export interface RouteResponse {
   total_distance_m?: number;
   estimated_time_min?: number;
   estimated_fuel_liters?: number;
+  original_coordinates?: number[][];
+  planning_coordinates?: number[][];
+  working_width?: number;
   [key: string]: unknown;
 }
 

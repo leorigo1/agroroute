@@ -18,6 +18,7 @@ export default function NewArea() {
     saveSelection,
     saveStatus,
     selection,
+    setWorkingWidthMeters,
     startSelection,
   } = useNewAreaSelection();
 
@@ -35,6 +36,10 @@ export default function NewArea() {
     speed_kmh: Number(speedKmh),
     working_width: Number(workingWidth),
   }), [fuelPerKm, name, speedKmh, workingWidth]);
+
+  useEffect(() => {
+    setWorkingWidthMeters(fieldSettings.working_width);
+  }, [fieldSettings.working_width, setWorkingWidthMeters]);
 
   const hasValidSettings =
     fieldSettings.name.length > 0 &&
