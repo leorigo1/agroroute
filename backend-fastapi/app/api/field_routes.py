@@ -137,7 +137,7 @@ def calculate_route(
         polygon,
         working_width_m=field.working_width,
         speed_kmh=field.speed_kmh,
-        fuel_per_km=field.fuel_per_km,
+        fuel_lph=field.fuel_per_km,
     )
 
     if not swaths:

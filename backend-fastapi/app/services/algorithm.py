@@ -213,20 +213,30 @@ def two_opt(
 def calculate_metrics(
     swaths: list[list[tuple[float, float]]],
     speed_kmh: float,
-    fuel_per_km: float,
+    fuel_lph: float,  # litros por hora
 ) -> tuple[float, float, float]:
     """
     Calcula distância total, tempo estimado e consumo de combustível.
 
     Distância total = soma das faixas de trabalho + deslocamentos entre faixas.
-    """
-    internal = sum(_swath_length(s) for s in swaths)   # metros trabalhados
-    transitions = _transition_cost(swaths)               # metros de deslocamento
-    total_m = internal + transitions
 
+    fuel_lph = litros por hora
+    """
+
+    internal = sum(_swath_length(s) for s in swaths)
+    transitions = _transition_cost(swaths)
+
+    total_m = internal + transitions
     total_km = total_m / 1000.0
-    time_min = (total_km / speed_kmh) * 60.0 if speed_kmh > 0 else 0.0
-    fuel_liters = total_km * fuel_per_km
+
+    # tempo em horas
+    time_h = total_km / speed_kmh if speed_kmh > 0 else 0.0
+
+    # tempo em minutos
+    time_min = time_h * 60.0
+
+    # consumo total
+    fuel_liters = time_h * fuel_lph
 
     return round(total_m, 2), round(time_min, 2), round(fuel_liters, 2)
 
@@ -236,7 +246,7 @@ def plan_coverage_route(
     polygon_lonlat: Polygon,
     working_width_m: float,
     speed_kmh: float,
-    fuel_per_km: float,
+    fuel_lph: float,
 ) -> tuple[list[list[list[float]]], float, float, float]:
     """
     Ponto de entrada do algoritmo.
@@ -276,7 +286,11 @@ def plan_coverage_route(
     swaths_xy = two_opt(swaths_xy)
 
     # 6. métricas
-    total_m, time_min, fuel_liters = calculate_metrics(swaths_xy, speed_kmh, fuel_per_km)
+    total_m, time_min, fuel_liters = calculate_metrics(
+    swaths_xy,
+    speed_kmh,
+    fuel_lph
+    )
 
     # 7. reprojetar de volta para lon/lat
     swaths_lonlat = [unproject_points(sw) for sw in swaths_xy]

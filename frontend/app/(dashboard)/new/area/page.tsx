@@ -106,7 +106,7 @@ export default function NewArea() {
           />
         </label>
         <label className="text-xs font-medium text-neutral-700">
-          Combustivel (L/km)
+          Combustivel (L/hr)
           <input
             type="number"
             min="0"
