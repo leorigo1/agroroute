@@ -192,3 +192,16 @@ def get_route(
         estimated_time_min=route.estimated_time_min,
         estimated_fuel_liters=route.estimated_fuel_liters,
     )
+
+@router.delete("/{field_id}", status_code=204)
+def delete_field(
+    field_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    field = db.query(Field).filter(Field.id == field_id, Field.user_id == user.id).first()
+    if field is None:
+        raise HTTPException(status_code=404, detail="Talhão não encontrado")
+
+    db.delete(field)
+    db.commit()
