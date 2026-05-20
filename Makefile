@@ -37,7 +37,7 @@ test-back:
 	$(COMPOSE) run --rm $(BACKEND_SERVICE) python -m pytest -q
 
 front:
-	cd frontend && npm run dev
+	cd frontend && npm install && npm run dev
 
 
 run:
