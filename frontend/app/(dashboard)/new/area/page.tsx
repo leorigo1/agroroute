@@ -41,6 +41,12 @@ export default function NewArea() {
     setWorkingWidthMeters(fieldSettings.working_width);
   }, [fieldSettings.working_width, setWorkingWidthMeters]);
 
+  useEffect(() => {
+    if (saveStatus === 'saved') {
+      router.replace('/');
+    }
+  }, [router, saveStatus]);
+
   const hasValidSettings =
     fieldSettings.name.length > 0 &&
     fieldSettings.working_width > 0 &&

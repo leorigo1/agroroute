@@ -125,15 +125,21 @@ export default function HomeFieldsMap() {
           }
 
           const coverageLines = swathsToCoverageLines(route?.swaths ?? []);
+          const selectField = () => {
+            router.push(`/area/${field.id}`);
+          };
 
           coverageLines.forEach((line) => {
-            L.polyline(
+            addClickableRouteLine(
               [
                 [line.start.lat, line.start.lng],
                 [line.end.lat, line.end.lng],
               ],
+              layer,
+              field.name,
+              selectField,
               STRAIGHT_PATH_STYLE,
-            ).addTo(layer);
+            );
           });
 
           if (coverageLines.length >= 2) {
@@ -144,10 +150,13 @@ export default function HomeFieldsMap() {
             );
 
             smoothPath.connectors.forEach((connector) => {
-              L.polyline(
+              addClickableRouteLine(
                 connector.map((point) => [point.lat, point.lng] as [number, number]),
+                layer,
+                field.name,
+                selectField,
                 CURVE_PATH_STYLE,
-              ).addTo(layer);
+              );
             });
           }
         });
@@ -170,6 +179,39 @@ export default function HomeFieldsMap() {
   }, [map, router]);
 
   return null;
+}
+
+function addClickableRouteLine(
+  points: L.LatLngExpression[],
+  layer: L.LayerGroup,
+  fieldName: string,
+  onSelect: () => void,
+  style: L.PolylineOptions,
+) {
+  const routeLine = L.polyline(points, style)
+    .bindTooltip(fieldName, {
+      direction: 'top',
+      sticky: true,
+    })
+    .on('click', onSelect)
+    .addTo(layer);
+
+  routeLine.getElement()?.classList.add('cursor-pointer');
+
+  const hitArea = L.polyline(points, {
+    color: style.color,
+    interactive: true,
+    opacity: 0,
+    weight: 18,
+  })
+    .bindTooltip(fieldName, {
+      direction: 'top',
+      sticky: true,
+    })
+    .on('click', onSelect)
+    .addTo(layer);
+
+  hitArea.getElement()?.classList.add('cursor-pointer');
 }
 
 function getSmoothPathOptions(workingWidthMeters?: number): SmoothPathOptions {
