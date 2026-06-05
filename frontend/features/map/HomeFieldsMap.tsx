@@ -9,11 +9,15 @@ import {
   buildSmoothCoveragePathForLeaflet,
   swathsToCoverageLines,
 } from '@/features/coverage/leafletSmoothCoveragePath';
-import { SmoothPathOptions } from '@/features/coverage/smoothCoveragePath';
 import {
   buildHeadlandCoverageRings,
   buildOuterBoundaryFromInnerCoordinates,
 } from '@/features/coverage/headland';
+import { addRouteEndpointMarkers } from '@/features/coverage/routeEndpointMarkers';
+import {
+  buildHeadlandAwareConnectors,
+  getHeadlandSmoothPathOptions,
+} from '@/features/coverage/headlandConnectors';
 
 const FIELD_STYLE: L.PolylineOptions = {
   color: '#f97316',
@@ -32,7 +36,7 @@ const STRAIGHT_PATH_STYLE: L.PolylineOptions = {
   lineJoin: 'round',
   opacity: 0.9,
   smoothFactor: 0.35,
-  weight: 3,
+  weight: 2,
 };
 
 const CURVE_PATH_STYLE: L.PolylineOptions = {
@@ -44,7 +48,7 @@ const HEADLAND_PASS_STYLE: L.PolylineOptions = {
   ...STRAIGHT_PATH_STYLE,
   color: '#c026d3',
   opacity: 0.85,
-  weight: 2,
+  weight: 1.5,
 };
 
 const INNER_BOUNDARY_STYLE: L.PolylineOptions = {
@@ -135,15 +139,24 @@ export default function HomeFieldsMap() {
               STRAIGHT_PATH_STYLE,
             ).addTo(layer);
           });
+          addRouteEndpointMarkers(layer, coverageLines);
 
           if (coverageLines.length >= 2) {
-            const smoothPath = buildSmoothCoveragePathForLeaflet(
-              map,
-              coverageLines,
-              getSmoothPathOptions(workingWidth),
-            );
+            const connectors = coordinates
+              ? buildHeadlandAwareConnectors(
+                  map,
+                  coverageLines,
+                  coordinates,
+                  planningCoordinates ?? null,
+                  workingWidth,
+                )
+              : buildSmoothCoveragePathForLeaflet(
+                  map,
+                  coverageLines,
+                  getHeadlandSmoothPathOptions(workingWidth),
+                ).connectors;
 
-            smoothPath.connectors.forEach((connector) => {
+            connectors.forEach((connector) => {
               L.polyline(
                 connector.map((point) => [point.lat, point.lng] as [number, number]),
                 CURVE_PATH_STYLE,
@@ -170,13 +183,4 @@ export default function HomeFieldsMap() {
   }, [map, router]);
 
   return null;
-}
-
-function getSmoothPathOptions(workingWidthMeters?: number): SmoothPathOptions {
-  const implementWidth = Math.max(workingWidthMeters ?? 6, 1);
-
-  return {
-    curveResolutionMeters: Math.max(implementWidth / 8, 0.5),
-    minTurningRadiusMeters: implementWidth,
-  };
 }

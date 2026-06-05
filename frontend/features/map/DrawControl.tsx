@@ -10,16 +10,14 @@ import {
   swathsToCoverageLines,
 } from '@/features/coverage/leafletSmoothCoveragePath';
 import {
-  CoverageLine,
-  LatLngPoint,
-  SmoothPathOptions,
-} from '@/features/coverage/smoothCoveragePath';
-import {
   buildHeadlandCoverageRings,
   buildInnerBoundaryCoordinates,
-  getHeadlandWidthMeters,
-  isConnectorInsideHeadlandZone,
 } from '@/features/coverage/headland';
+import { addRouteEndpointMarkers } from '@/features/coverage/routeEndpointMarkers';
+import {
+  buildHeadlandAwareConnectors,
+  getHeadlandSmoothPathOptions,
+} from '@/features/coverage/headlandConnectors';
 
 const DEFAULT_WORKING_WIDTH_METERS = 6;
 
@@ -29,7 +27,7 @@ const STRAIGHT_PATH_STYLE: L.PolylineOptions = {
   lineJoin: 'round',
   opacity: 0.9,
   smoothFactor: 0.35,
-  weight: 3,
+  weight: 2,
 };
 
 const CURVE_PATH_STYLE: L.PolylineOptions = {
@@ -52,7 +50,7 @@ const HEADLAND_PASS_STYLE: L.PolylineOptions = {
   ...STRAIGHT_PATH_STYLE,
   color: '#c026d3',
   opacity: 0.85,
-  weight: 2,
+  weight: 1.5,
 };
 
 export default function DrawControl() {
@@ -162,10 +160,11 @@ export default function DrawControl() {
               STRAIGHT_PATH_STYLE,
             ).addTo(map);
           });
+          addRouteEndpointMarkers(map, coverageLines);
 
           if (coverageLines.length >= 2) {
             const connectors = innerBoundaryCoordinates
-              ? buildConstrainedConnectors(
+              ? buildHeadlandAwareConnectors(
                   map,
                   coverageLines,
                   coordinates,
@@ -175,7 +174,7 @@ export default function DrawControl() {
               : buildSmoothCoveragePathForLeaflet(
                   map,
                   coverageLines,
-                  getSmoothPathOptions(DEFAULT_WORKING_WIDTH_METERS),
+                  getHeadlandSmoothPathOptions(DEFAULT_WORKING_WIDTH_METERS),
                 ).connectors;
 
             connectors.forEach((connector) => {
@@ -202,61 +201,4 @@ export default function DrawControl() {
   }, [map]);
 
   return null;
-}
-
-function getSmoothPathOptions(workingWidthMeters: number): SmoothPathOptions {
-  const implementWidth = Math.max(workingWidthMeters, 1);
-  const headlandWidth = getHeadlandWidthMeters(implementWidth);
-
-  return {
-    curveResolutionMeters: Math.max(implementWidth / 8, 0.5),
-    minTurningRadiusMeters: headlandWidth / 2,
-  };
-}
-
-function buildConstrainedConnectors(
-  map: L.Map,
-  coverageLines: CoverageLine[],
-  outerBoundaryCoordinates: number[][],
-  innerBoundaryCoordinates: number[][] | null,
-  workingWidthMeters: number,
-): LatLngPoint[][] {
-  const implementWidth = Math.max(workingWidthMeters, 1);
-  const headlandWidth = getHeadlandWidthMeters(implementWidth);
-  const resolution = Math.max(implementWidth / 8, 0.5);
-  const radiusCandidates = [
-    headlandWidth / 2,
-    headlandWidth * 0.45,
-    headlandWidth * 0.4,
-    headlandWidth * 0.35,
-    headlandWidth * 0.3,
-  ];
-  const connectors: LatLngPoint[][] = [];
-
-  for (let index = 0; index < coverageLines.length - 1; index += 1) {
-    const currentLine = coverageLines[index];
-    const nextLine = coverageLines[index + 1];
-    const validConnector = radiusCandidates
-      .map((radius) =>
-        buildSmoothCoveragePathForLeaflet(map, [currentLine, nextLine], {
-          curveResolutionMeters: resolution,
-          minTurningRadiusMeters: Math.max(radius, implementWidth * 0.35),
-        }).connectors[0],
-      )
-      .find(
-        (connector) =>
-          connector?.length &&
-          isConnectorInsideHeadlandZone(
-            connector,
-            outerBoundaryCoordinates,
-            innerBoundaryCoordinates,
-          ),
-      );
-
-    if (validConnector) {
-      connectors.push(validConnector);
-    }
-  }
-
-  return connectors;
 }
