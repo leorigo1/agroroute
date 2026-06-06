@@ -4,7 +4,12 @@ import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import { useMap } from 'react-leaflet';
 import { useRouter } from 'next/navigation';
-import { getField, getRoute, listFields } from '@/features/fields/fieldService';
+import {
+  getField,
+  getRoute,
+  isAuthExpiredError,
+  listFields,
+} from '@/features/fields/fieldService';
 import {
   buildSmoothCoveragePathForLeaflet,
   swathsToCoverageLines,
@@ -129,15 +134,21 @@ export default function HomeFieldsMap() {
           }
 
           const coverageLines = swathsToCoverageLines(route?.swaths ?? []);
+          const selectField = () => {
+            router.push(`/area/${field.id}`);
+          };
 
           coverageLines.forEach((line) => {
-            L.polyline(
+            addClickableRouteLine(
               [
                 [line.start.lat, line.start.lng],
                 [line.end.lat, line.end.lng],
               ],
+              layer,
+              field.name,
+              selectField,
               STRAIGHT_PATH_STYLE,
-            ).addTo(layer);
+            );
           });
           addRouteEndpointMarkers(layer, coverageLines);
 
@@ -157,10 +168,13 @@ export default function HomeFieldsMap() {
                 ).connectors;
 
             connectors.forEach((connector) => {
-              L.polyline(
+              addClickableRouteLine(
                 connector.map((point) => [point.lat, point.lng] as [number, number]),
+                layer,
+                field.name,
+                selectField,
                 CURVE_PATH_STYLE,
-              ).addTo(layer);
+              );
             });
           }
         });
@@ -170,6 +184,13 @@ export default function HomeFieldsMap() {
           map.fitBounds(bounds.pad(0.2), { animate: true });
         }
       } catch (error) {
+        if (cancelled) return;
+
+        if (isAuthExpiredError(error)) {
+          router.replace('/login');
+          return;
+        }
+
         console.error('Erro ao carregar talhoes da home:', error);
       }
     }
@@ -183,4 +204,37 @@ export default function HomeFieldsMap() {
   }, [map, router]);
 
   return null;
+}
+
+function addClickableRouteLine(
+  points: L.LatLngExpression[],
+  layer: L.LayerGroup,
+  fieldName: string,
+  onSelect: () => void,
+  style: L.PolylineOptions,
+) {
+  const routeLine = L.polyline(points, style)
+    .bindTooltip(fieldName, {
+      direction: 'top',
+      sticky: true,
+    })
+    .on('click', onSelect)
+    .addTo(layer);
+
+  routeLine.getElement()?.classList.add('cursor-pointer');
+
+  const hitArea = L.polyline(points, {
+    color: style.color,
+    interactive: true,
+    opacity: 0,
+    weight: 18,
+  })
+    .bindTooltip(fieldName, {
+      direction: 'top',
+      sticky: true,
+    })
+    .on('click', onSelect)
+    .addTo(layer);
+
+  hitArea.getElement()?.classList.add('cursor-pointer');
 }

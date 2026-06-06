@@ -171,7 +171,7 @@ def two_opt(
     swaths: list[list[tuple[float, float]]],
 ) -> list[list[tuple[float, float]]]:
     """
-    Melhora a sequência gerada pelo Nearest Neighbor.
+    Melhora a sequência gerada pelo Nearest Neighborq.
 
     Testa reversões de subsequências: se inverter o trecho [i..k]
     reduz a distância total de deslocamento, aplica a troca.

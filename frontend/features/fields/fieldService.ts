@@ -1,5 +1,16 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+export class ApiError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly action: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 export interface CreateFieldPayload {
   name: string;
   coordinates: number[][];
@@ -42,6 +53,27 @@ function getHeaders(): HeadersInit {
   return headers;
 }
 
+async function buildApiError(res: Response, action: string): Promise<Error> {
+  if (res.status === 401) {
+    clearStoredAuth();
+    return new ApiError(res.status, action, 'Sessao expirada. Faça login novamente.');
+  }
+
+  const detail = await res.text().catch(() => '');
+  return new ApiError(res.status, action, `Falha ao ${action} (${res.status}): ${detail}`);
+}
+
+function clearStoredAuth() {
+  if (typeof window === 'undefined') return;
+
+  localStorage.removeItem('agroroute_token');
+  window.dispatchEvent(new Event('agroroute-auth-change'));
+}
+
+export function isAuthExpiredError(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 401;
+}
+
 export async function createField(payload: CreateFieldPayload): Promise<FieldResponse> {
   const res = await fetch(`${API_URL}/fields/`, {
     method: 'POST',
@@ -50,8 +82,7 @@ export async function createField(payload: CreateFieldPayload): Promise<FieldRes
   });
 
   if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    throw new Error(`Falha ao criar campo (${res.status}): ${detail}`);
+    throw await buildApiError(res, 'criar campo');
   }
   return res.json();
 }
@@ -63,8 +94,7 @@ export async function calculateRoute(fieldId: string | number): Promise<RouteRes
   });
 
   if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    throw new Error(`Falha ao calcular rota (${res.status}): ${detail}`);
+    throw await buildApiError(res, 'calcular rota');
   }
   return res.json();
 }
@@ -76,8 +106,7 @@ export async function listFields(): Promise<FieldResponse[]> {
   });
 
   if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    throw new Error(`Falha ao listar talhoes (${res.status}): ${detail}`);
+    throw await buildApiError(res, 'listar talhoes');
   }
   return res.json();
 }
@@ -89,8 +118,7 @@ export async function getField(fieldId: string | number): Promise<FieldResponse>
   });
 
   if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    throw new Error(`Falha ao buscar talhao (${res.status}): ${detail}`);
+    throw await buildApiError(res, 'buscar talhao');
   }
   return res.json();
 }
@@ -106,8 +134,7 @@ export async function getRoute(fieldId: string | number): Promise<RouteResponse 
   }
 
   if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    throw new Error(`Falha ao buscar rota (${res.status}): ${detail}`);
+    throw await buildApiError(res, 'buscar rota');
   }
   return res.json();
 }

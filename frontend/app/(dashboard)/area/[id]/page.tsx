@@ -62,13 +62,23 @@ export default function AreaDetails() {
           {error ? <p className="mt-1 text-sm text-red-600">{error}</p> : null}
         </div>
 
-        <button
-          type="button"
-          onClick={() => router.replace('/')}
-          className="rounded border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100"
-        >
-          Voltar
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => exportRouteAsGeoJson(field, route)}
+            disabled={!route?.swaths?.length}
+            className="rounded border border-green-700 px-3 py-2 text-sm font-medium text-green-800 transition hover:bg-green-50 disabled:cursor-not-allowed disabled:border-neutral-300 disabled:text-neutral-400 disabled:hover:bg-transparent"
+          >
+            Exportar GeoJSON
+          </button>
+          <button
+            type="button"
+            onClick={() => router.replace('/')}
+            className="rounded border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100"
+          >
+            Voltar
+          </button>
+        </div>
       </div>
 
       <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
@@ -99,4 +109,55 @@ function formatNumber(value?: number): string {
   return new Intl.NumberFormat('pt-BR', {
     maximumFractionDigits: 1,
   }).format(value);
+}
+
+function exportRouteAsGeoJson(field: FieldResponse | null, route: RouteResponse | null) {
+  if (!route?.swaths?.length) return;
+
+  const fieldName = typeof field?.name === 'string' ? field.name : 'area';
+  const features = route.swaths.map((swath, index) => ({
+    type: 'Feature' as const,
+    properties: {
+      field_id: field?.id ?? null,
+      field_name: fieldName,
+      swath_index: index + 1,
+      total_distance_m: route.total_distance_m ?? null,
+      estimated_time_min: route.estimated_time_min ?? null,
+      estimated_fuel_liters: route.estimated_fuel_liters ?? null,
+    },
+    geometry: {
+      type: 'LineString' as const,
+      coordinates: swath,
+    },
+  }));
+
+  const geoJson = {
+    type: 'FeatureCollection' as const,
+    name: `${fieldName} - rota calculada`,
+    features,
+  };
+
+  const blob = new Blob([JSON.stringify(geoJson, null, 2)], {
+    type: 'application/geo+json;charset=utf-8',
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+
+  link.href = url;
+  link.download = `${buildSafeFilename(fieldName)}-rota.geojson`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function buildSafeFilename(value: string): string {
+  const normalized = value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  return normalized || 'area';
 }
