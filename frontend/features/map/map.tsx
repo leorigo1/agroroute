@@ -41,6 +41,11 @@ export default function Map() {
   const pathname = usePathname();
   const areaDetailMatch = pathname.match(/^\/area\/([^/]+)$/);
   const areaDetailId = areaDetailMatch?.[1];
+  const cartoApiKey = process.env.NEXT_PUBLIC_CARTO_API_KEY;
+
+  if (!cartoApiKey) {
+    throw new Error('Configure NEXT_PUBLIC_CARTO_API_KEY para carregar o mapa.');
+  }
 
   return (
     <MapContainer
@@ -53,15 +58,13 @@ export default function Map() {
       style={{ height: '100%', width: '100%' }}
     >
       <TileLayer
-        attribution="Tiles &copy; Esri"
+        attribution="Tiles &copy; Esri &mdash; Sources: Esri, Maxar, Earthstar Geographics"
         url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
       />
-
-      {/* Camada de nomes das cidades */}
       <TileLayer
-        url="https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png"
-        attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-        opacity={0.8}
+        attribution='&copy; <a href="https://carto.com/attributions">CARTO</a>'
+        url={`https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png?key=${encodeURIComponent(cartoApiKey)}`}
+        opacity={0.85}
       />
 
       <MapResizeHandler />
