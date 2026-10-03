@@ -766,10 +766,8 @@ def create_pix_payment(
             .filter(Payment.subscription_id == subscription.id)
             .count()
         )
-        expiration = (
-            datetime.now(timezone.utc).replace(microsecond=0)
-            + timedelta(minutes=30)
-        )
+        brazil_timezone = timezone(timedelta(hours=-3))
+        expiration = datetime.now(brazil_timezone) + timedelta(minutes=30)
         payment_data = mp_service.create_payment(
             {
                 "transaction_amount": float(subscription.amount),
@@ -777,7 +775,7 @@ def create_pix_payment(
                 "payment_method_id": "pix",
                 "external_reference": subscription.external_reference,
                 "notification_url": f"{frontend_url}/api/subscriptions/webhook",
-                "date_of_expiration": expiration.isoformat(timespec="seconds"),
+                "date_of_expiration": expiration.isoformat(timespec="milliseconds"),
                 "payer": {
                     "email": user.email,
                     "identification": {

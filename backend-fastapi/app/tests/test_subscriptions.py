@@ -239,7 +239,7 @@ def test_create_pix_payment_returns_provider_qr_and_uses_configured_price(
     assert captured["transaction_amount"] == 8.99
     assert captured["payment_method_id"] == "pix"
     assert re.fullmatch(
-        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00",
+        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}-03:00",
         captured["date_of_expiration"],
     )
     assert captured["payer"]["identification"] == {
