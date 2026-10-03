@@ -4,6 +4,7 @@ import hmac
 import json
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+import re
 
 import pytest
 from fastapi import HTTPException
@@ -237,6 +238,10 @@ def test_create_pix_payment_returns_provider_qr_and_uses_configured_price(
     assert result["pix"]["qr_code_base64"] == "encoded-image"
     assert captured["transaction_amount"] == 8.99
     assert captured["payment_method_id"] == "pix"
+    assert re.fullmatch(
+        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00",
+        captured["date_of_expiration"],
+    )
     assert captured["payer"]["identification"] == {
         "type": "CPF",
         "number": "12345678900",
