@@ -40,7 +40,7 @@ export interface RouteResponse {
   [key: string]: unknown;
 }
 
-function getHeaders(): HeadersInit {
+export function getHeaders(): HeadersInit {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -53,10 +53,31 @@ function getHeaders(): HeadersInit {
   return headers;
 }
 
-async function buildApiError(res: Response, action: string): Promise<Error> {
+export async function buildApiError(res: Response, action: string): Promise<Error> {
   if (res.status === 401) {
     clearStoredAuth();
     return new ApiError(res.status, action, 'Sessao expirada. Faça login novamente.');
+  }
+
+  if (res.status === 402) {
+    const payload: unknown = await res
+      .clone()
+      .json()
+      .catch(() => null);
+    if (
+      typeof payload === 'object' &&
+      payload !== null &&
+      'detail' in payload &&
+      typeof payload.detail === 'object' &&
+      payload.detail !== null &&
+      'error' in payload.detail &&
+      payload.detail.error === 'SUBSCRIPTION_REQUIRED'
+    ) {
+      if (typeof window !== 'undefined' && window.location.pathname !== '/subscription') {
+        window.location.assign('/subscription');
+      }
+      return new ApiError(res.status, action, 'É necessário possuir uma assinatura ativa.');
+    }
   }
 
   const detail = await res.text().catch(() => '');

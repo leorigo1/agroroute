@@ -12,3 +12,4 @@ python-jose[cryptography]
 pydantic[email]
 pytest
 pytest-asyncio
+mercadopago==3.6.0

@@ -6,6 +6,7 @@ from app.api.routes import router as main_router
 from app.api.user_routes import router as user_router
 from app.api.auth_routes import router as auth_router
 from app.api.field_routes import router as field_router
+from app.api.subscription_routes import router as subscription_router
 
 from app.database.database import engine, wait_for_db
 from app.database.database import Base
@@ -13,6 +14,8 @@ from app.database.database import Base
 import app.models.user_model
 import app.models.field_model
 import app.models.routes_model
+import app.models.subscription_model
+import app.models.payment_model
 
 import os
 
@@ -47,6 +50,7 @@ app.include_router(main_router)
 app.include_router(user_router)
 app.include_router(auth_router)
 app.include_router(field_router)
+app.include_router(subscription_router)
 
 
 # 🚀 startup

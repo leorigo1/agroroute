@@ -12,3 +12,8 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     fields = relationship("Field", back_populates="user", cascade="all,delete-orphan") #relaciona com talkhoes
+    subscriptions = relationship(
+        "Subscription",
+        back_populates="user",
+        cascade="all,delete-orphan",
+    )
