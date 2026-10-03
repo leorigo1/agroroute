@@ -42,10 +42,7 @@ export default function Map() {
   const areaDetailMatch = pathname.match(/^\/area\/([^/]+)$/);
   const areaDetailId = areaDetailMatch?.[1];
   const cartoApiKey = process.env.NEXT_PUBLIC_CARTO_API_KEY;
-
-  if (!cartoApiKey) {
-    throw new Error('Configure NEXT_PUBLIC_CARTO_API_KEY para carregar o mapa.');
-  }
+  const cartoKeyQuery = cartoApiKey ? `?key=${encodeURIComponent(cartoApiKey)}` : '';
 
   return (
     <MapContainer
@@ -63,7 +60,7 @@ export default function Map() {
       />
       <TileLayer
         attribution='&copy; <a href="https://carto.com/attributions">CARTO</a>'
-        url={`https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png?key=${encodeURIComponent(cartoApiKey)}`}
+        url={`https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png${cartoKeyQuery}`}
         opacity={0.85}
       />
 
