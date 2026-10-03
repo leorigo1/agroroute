@@ -23,6 +23,7 @@ import {
   buildHeadlandAwareConnectors,
   getHeadlandSmoothPathOptions,
 } from '@/features/coverage/headlandConnectors';
+import { getSavedUserLocation } from './userLocation';
 
 const FIELD_STYLE: L.PolylineOptions = {
   color: '#f97316',
@@ -180,7 +181,7 @@ export default function HomeFieldsMap() {
         });
 
         const bounds = layer.getBounds();
-        if (bounds.isValid()) {
+        if (bounds.isValid() && !getSavedUserLocation()) {
           map.fitBounds(bounds.pad(0.2), { animate: true });
         }
       } catch (error) {

@@ -7,6 +7,7 @@ import { useMap } from 'react-leaflet';
 import AreaDetailMap from './AreaDetailMap';
 import AreaSelectionMap from './AreaSelectionMap';
 import HomeFieldsMap from './HomeFieldsMap';
+import UserLocationMap from './UserLocationMap';
 
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
@@ -64,6 +65,7 @@ export default function Map() {
       />
 
       <MapResizeHandler />
+      <UserLocationMap />
       {pathname === '/' ? <HomeFieldsMap /> : null}
       {areaDetailId ? <AreaDetailMap fieldId={areaDetailId} /> : null}
       <AreaSelectionMap />

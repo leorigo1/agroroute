@@ -1,3 +1,5 @@
+import LocateMeButton from '@/features/map/LocateMeButton';
+
 export default function Dashboard() {
   return (
     <section className="flex flex-wrap items-end justify-between gap-4">
@@ -7,6 +9,7 @@ export default function Dashboard() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
+        <LocateMeButton />
         <a
           href="/new/area"
           className="rounded bg-green-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-green-800"

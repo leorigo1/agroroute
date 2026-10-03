@@ -4,6 +4,7 @@ import { FormEvent, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { login } from '@/features/auth/authService';
+import { reportUserLocationError, requestUserLocation } from '@/features/map/userLocation';
 import AuthLayout from '../AuthLayout';
 import styles from '../auth.module.css';
 
@@ -104,6 +105,10 @@ export default function LoginPage() {
       localStorage.setItem('agroroute_token', data.access_token);
       window.dispatchEvent(new Event('agroroute-auth-change'));
       router.replace('/');
+      void requestUserLocation().catch((locationError: unknown) => {
+        const reportedError = reportUserLocationError(locationError);
+        console.error('Não foi possível obter a localização após o login:', reportedError);
+      });
     } catch (err) {
       console.error(err);
       setError('E-mail ou senha inválidos. Tente novamente.');
