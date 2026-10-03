@@ -1,5 +1,7 @@
 import { getApiUrl } from '@/features/apiConfig';
 
+export const PREMIUM_ACCESS_UPDATED_EVENT = 'agroroute-premium-access-updated';
+
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
@@ -117,7 +119,11 @@ export async function calculateRoute(fieldId: string | number): Promise<RouteRes
   if (!res.ok) {
     throw await buildApiError(res, 'calcular rota');
   }
-  return res.json();
+  const route = (await res.json()) as RouteResponse;
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(PREMIUM_ACCESS_UPDATED_EVENT));
+  }
+  return route;
 }
 
 export async function listFields(): Promise<FieldResponse[]> {

@@ -27,6 +27,12 @@ from app.models.subscription_model import (
 )
 from app.models.user_model import User
 from app.services import mercadopago_service as mp_service
+from app.services.premium_access import (
+    SUBSCRIPTION_REQUIRED,
+    get_active_subscription,
+    get_active_subscriptions,
+    get_premium_access_state,
+)
 from app.services.mercadopago_service import (
     MercadoPagoConfigurationError,
     MercadoPagoError,
@@ -40,12 +46,6 @@ SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey123")
 ALGORITHM = "HS256"
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 PLAN_NAME = "PREMIUM_MONTHLY"
-SUBSCRIPTION_REQUIRED = {
-    "error": "SUBSCRIPTION_REQUIRED",
-    "message": "É necessário possuir uma assinatura ativa.",
-}
-
-
 class CreateSubscriptionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -105,15 +105,7 @@ def get_current_premium_user(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> User:
-    subscription = (
-        db.query(Subscription)
-        .filter(
-            Subscription.user_id == user.id,
-            Subscription.status == "ACTIVE",
-        )
-        .order_by(desc(Subscription.updated_at), desc(Subscription.id))
-        .first()
-    )
+    subscription = next(iter(get_active_subscriptions(db, user.id)), None)
     next_payment_date = (
         _as_datetime(subscription.next_payment_date)
         if subscription is not None
@@ -121,13 +113,14 @@ def get_current_premium_user(
     )
     if (
         subscription is not None
+        and subscription.status == "ACTIVE"
         and subscription.mercado_pago_subscription_id is None
         and next_payment_date is not None
         and next_payment_date <= datetime.now(timezone.utc)
     ):
         subscription.status = "PAST_DUE"
         db.commit()
-    if subscription is None or subscription.status != "ACTIVE":
+    if get_active_subscription(db, user.id) is None:
         raise HTTPException(
             status_code=402,
             detail=SUBSCRIPTION_REQUIRED,
@@ -690,7 +683,10 @@ def get_my_subscription(
                 .first()
             )
             if refreshed_subscription is None:
-                return {"subscription": None}
+                return {
+                    "subscription": None,
+                    **get_premium_access_state(db, user.id),
+                }
             subscription = refreshed_subscription
         next_payment_date = _as_datetime(subscription.next_payment_date)
         if (
@@ -700,7 +696,10 @@ def get_my_subscription(
         ):
             subscription.status = "PAST_DUE"
         db.commit()
-    return {"subscription": _subscription_response(subscription)}
+    return {
+        "subscription": _subscription_response(subscription),
+        **get_premium_access_state(db, user.id),
+    }
 
 
 @router.post("/pix", status_code=201)

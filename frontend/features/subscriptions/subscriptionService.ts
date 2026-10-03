@@ -30,6 +30,9 @@ export interface PixPaymentResponse {
 
 export interface MySubscriptionResponse {
   subscription: Subscription | null;
+  premium?: boolean;
+  free_usage_available?: boolean;
+  free_usage_used?: boolean;
 }
 
 async function subscriptionRequest<T>(

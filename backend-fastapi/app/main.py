@@ -16,6 +16,7 @@ import app.models.field_model
 import app.models.routes_model
 import app.models.subscription_model
 import app.models.payment_model
+import app.models.premium_trial_usage_model
 
 import os
 

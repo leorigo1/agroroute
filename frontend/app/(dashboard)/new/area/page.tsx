@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useNewAreaSelection } from '@/features/map/NewAreaSelectionContext';
+import PremiumAccessNotice from '@/features/subscriptions/PremiumAccessNotice';
 
 export default function NewArea() {
   const router = useRouter();
@@ -62,6 +63,7 @@ export default function NewArea() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-wrap items-end justify-between gap-4">
+      <PremiumAccessNotice />
       <div>
         <h1 className="text-xl font-semibold text-neutral-950">Nova area</h1>
         <p className="text-sm text-neutral-600">

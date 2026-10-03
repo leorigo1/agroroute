@@ -17,6 +17,7 @@ from app.api import subscription_routes
 from app.database.database import Base
 from app.models.field_model import Field
 from app.models.payment_model import Payment
+from app.models.premium_trial_usage_model import PremiumTrialUsage
 from app.models.routes_model import Route
 from app.models.subscription_model import Subscription
 from app.models.user_model import User
@@ -32,7 +33,12 @@ def db():
     )
     Base.metadata.create_all(
         bind=engine,
-        tables=[User.__table__, Subscription.__table__, Payment.__table__],
+        tables=[
+            User.__table__,
+            Subscription.__table__,
+            Payment.__table__,
+            PremiumTrialUsage.__table__,
+        ],
     )
     session = sessionmaker(bind=engine)()
     try:
@@ -41,7 +47,12 @@ def db():
         session.close()
         Base.metadata.drop_all(
             bind=engine,
-            tables=[Payment.__table__, Subscription.__table__, User.__table__],
+            tables=[
+                PremiumTrialUsage.__table__,
+                Payment.__table__,
+                Subscription.__table__,
+                User.__table__,
+            ],
         )
         engine.dispose()
 

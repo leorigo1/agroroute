@@ -9,6 +9,7 @@ from app.models.routes_model import Route
 from app.schemas.field_schema import FieldCreate, FieldOut, FieldDetail, RouteOut
 from app.services.algorithm import plan_coverage_route
 from app.services.user_service import verify_password
+from app.services.premium_access import reserve_free_premium_usage
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 
@@ -130,45 +131,50 @@ def calculate_route(
     if field is None:
         raise HTTPException(status_code=404, detail="Talhão não encontrado")
 
-    polygon = to_shape(field.polygon)
-
-    #roda o algoritmo
-    swaths, total_m, time_min, fuel_liters = plan_coverage_route(
-        polygon,
-        working_width_m=field.working_width,
-        speed_kmh=field.speed_kmh,
-        fuel_lph=field.fuel_lph,
-    )
-
-    if not swaths:
-        raise HTTPException(status_code=422, detail="Não foi possível gerar faixas para este talhão")
-
-    #salva ou atualiza a rota
-    route = db.query(Route).filter(Route.field_id == field.id).first()
-    if route is None:
-        route = Route(
-            field_id=field.id,
-            swaths=swaths,
-            total_distance_m=total_m,
-            estimated_time_min=time_min,
-            estimated_fuel_liters=fuel_liters,
+    try:
+        reserve_free_premium_usage(db, user.id)
+        polygon = to_shape(field.polygon)
+        swaths, total_m, time_min, fuel_liters = plan_coverage_route(
+            polygon,
+            working_width_m=field.working_width,
+            speed_kmh=field.speed_kmh,
+            fuel_lph=field.fuel_lph,
         )
-        db.add(route)
-    else:
-        route.swaths = swaths
-        route.total_distance_m = total_m
-        route.estimated_time_min = time_min
-        route.estimated_fuel_liters = fuel_liters
 
-    db.commit()
-    db.refresh(route)
+        if not swaths:
+            raise HTTPException(
+                status_code=422,
+                detail="Não foi possível gerar faixas para este talhão",
+            )
 
-    return RouteOut(
-        swaths=route.swaths,
-        total_distance_m=route.total_distance_m,
-        estimated_time_min=route.estimated_time_min,
-        estimated_fuel_liters=route.estimated_fuel_liters,
-    )
+        route = db.query(Route).filter(Route.field_id == field.id).first()
+        if route is None:
+            route = Route(
+                field_id=field.id,
+                swaths=swaths,
+                total_distance_m=total_m,
+                estimated_time_min=time_min,
+                estimated_fuel_liters=fuel_liters,
+            )
+            db.add(route)
+        else:
+            route.swaths = swaths
+            route.total_distance_m = total_m
+            route.estimated_time_min = time_min
+            route.estimated_fuel_liters = fuel_liters
+
+        db.commit()
+        db.refresh(route)
+
+        return RouteOut(
+            swaths=route.swaths,
+            total_distance_m=route.total_distance_m,
+            estimated_time_min=route.estimated_time_min,
+            estimated_fuel_liters=route.estimated_fuel_liters,
+        )
+    except Exception:
+        db.rollback()
+        raise
 
 
 #GET /fields/{id}/route ─ buscar rota salva

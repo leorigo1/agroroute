@@ -90,6 +90,8 @@ token temporário do cartão.
   pagamento PIX mensal de R$ 8,99 e retorna QR Code e código copia e cola. O QR
   expira em 30 minutos; cada renovação mensal exige um novo pagamento.
 - `GET /api/subscriptions/me`: consulta o estado local da conta autenticada.
+  Também retorna `premium`, `free_usage_available` e `free_usage_used`; essa
+  consulta não consome o uso gratuito.
 - `POST /api/subscriptions/me/pause`, `/cancel` e `/reactivate`: altera a
   assinatura recorrente por cartão e só grava a transição após confirmação do
   Mercado Pago.
@@ -126,6 +128,20 @@ O projeto cria tabelas com `Base.metadata.create_all` no startup. Esse mecanismo
 cria as novas tabelas, mas não é um sistema de migração de alterações em tabelas
 existentes. As novas tabelas não exigem alteração de `users`, `fields`, `rotas`
 ou PostGIS.
+
+## Uso gratuito do cálculo de rotas
+
+Cada usuário pode calcular uma rota uma vez sem assinatura. O benefício só é
+reservado ao executar `POST /api/fields/{field_id}/calculate`, depois de
+autenticar e validar a propriedade do talhão. A reserva e a gravação da rota
+ocorrem na mesma transação; falhas no cálculo ou na persistência desfazem a
+reserva. Uma restrição única por usuário no PostgreSQL impede que requisições
+concorrentes obtenham dois usos. Assinantes Premium ativos continuam sem limite,
+e cancelar ou pausar uma assinatura não restaura um uso já consumido.
+
+O estado é persistido na tabela `premium_trial_usage` e exposto pela consulta
+`GET /api/subscriptions/me`. A interface apenas apresenta esse estado; somente
+o backend decide se autoriza o cálculo.
 
 Use um banco de teste isolado para pytest. Não execute
 `app/tests/test_models.py` contra produção: esse teste contém `DROP TABLE`.
