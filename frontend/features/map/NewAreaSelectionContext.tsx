@@ -15,6 +15,7 @@ import {
   RouteResponse,
 } from '@/features/fields/fieldService';
 import { buildInnerBoundaryCoordinates } from '@/features/coverage/headland';
+import { calculateAreaHectares } from '@/features/map/geographicArea';
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 type FieldSettings = Omit<CreateFieldPayload, 'coordinates'>;
@@ -30,6 +31,7 @@ interface NewAreaSelectionContextValue {
   isSelecting: boolean;
   resetToken: number;
   route: RouteResponse | null;
+  areaHectares: number | null;
   saveError: string | null;
   saveStatus: SaveStatus;
   selection: AreaSelection | null;
@@ -50,6 +52,7 @@ export function NewAreaSelectionProvider({ children }: { children: ReactNode }) 
   const [isSelecting, setIsSelecting] = useState(false);
   const [resetToken, setResetToken] = useState(0);
   const [route, setRoute] = useState<RouteResponse | null>(null);
+  const [areaHectares, setAreaHectares] = useState<number | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [selection, setSelectionState] = useState<AreaSelection | null>(null);
@@ -58,12 +61,18 @@ export function NewAreaSelectionProvider({ children }: { children: ReactNode }) 
 
   const setSelection = useCallback((nextSelection: AreaSelection | null) => {
     setSelectionState(nextSelection);
+    setAreaHectares(
+      nextSelection?.isClosed
+        ? calculateAreaHectares(nextSelection.coordinates)
+        : null,
+    );
     setSaveError(null);
     setSaveStatus('idle');
   }, []);
 
   const startSelection = useCallback(() => {
     setRoute(null);
+    setAreaHectares(null);
     setSaveError(null);
     setSaveStatus('idle');
     setSelectionState(null);
@@ -73,6 +82,7 @@ export function NewAreaSelectionProvider({ children }: { children: ReactNode }) 
 
   const cancelSelection = useCallback(() => {
     setRoute(null);
+    setAreaHectares(null);
     setSaveError(null);
     setSaveStatus('idle');
     setSelectionState(null);
@@ -103,7 +113,11 @@ export function NewAreaSelectionProvider({ children }: { children: ReactNode }) 
       const field = await createField({
         ...fieldSettings,
         coordinates: innerBoundaryCoordinates,
+        original_coordinates: selection.coordinates,
       });
+      if (typeof field.area_hectares === 'number') {
+        setAreaHectares(field.area_hectares);
+      }
       const calculatedRoute = await calculateRoute(field.id);
 
       setRoute({
@@ -128,6 +142,7 @@ export function NewAreaSelectionProvider({ children }: { children: ReactNode }) 
       requestUndoPoint,
       resetToken,
       route,
+      areaHectares,
       saveError,
       saveSelection,
       saveStatus,
@@ -145,6 +160,7 @@ export function NewAreaSelectionProvider({ children }: { children: ReactNode }) 
       requestUndoPoint,
       resetToken,
       route,
+      areaHectares,
       saveError,
       saveSelection,
       saveStatus,

@@ -17,6 +17,7 @@ export class ApiError extends Error {
 export interface CreateFieldPayload {
   name: string;
   coordinates: number[][];
+  original_coordinates?: number[][];
   working_width: number;
   speed_kmh: number;
   fuel_lph: number;
@@ -29,6 +30,8 @@ export interface FieldResponse {
   working_width: number;
   speed_kmh?: number;
   fuel_lph: number;
+  area_m2?: number;
+  area_hectares?: number;
   [key: string]: unknown;
 }
 

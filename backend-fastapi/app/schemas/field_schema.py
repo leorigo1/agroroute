@@ -5,6 +5,7 @@ from pydantic import AliasChoices, BaseModel, Field
 class FieldCreate(BaseModel):
     name: str
     coordinates: list[list[float]]  # [[lon, lat], [lon, lat], ...]
+    original_coordinates: list[list[float]] | None = None
     working_width: float             # metros
     speed_kmh: float
     fuel_lph: float = Field(
@@ -19,6 +20,8 @@ class FieldOut(BaseModel):
     working_width: float
     speed_kmh: float
     fuel_lph: float
+    area_m2: float | None = None
+    area_hectares: float | None = None
 
     class Config:
         from_attributes = True

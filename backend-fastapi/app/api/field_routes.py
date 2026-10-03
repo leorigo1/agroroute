@@ -10,6 +10,7 @@ from app.schemas.field_schema import FieldCreate, FieldOut, FieldDetail, RouteOu
 from app.services.algorithm import plan_coverage_route
 from app.services.user_service import verify_password
 from app.services.premium_access import reserve_free_premium_usage
+from app.services.geographic_area import calculate_polygon_area
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 
@@ -71,6 +72,15 @@ def create_field(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    try:
+        area_values = calculate_polygon_area(
+            payload.original_coordinates
+            if payload.original_coordinates is not None
+            else payload.coordinates
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
     polygon = _to_polygon(payload.coordinates)
 
     field = Field(
@@ -84,7 +94,14 @@ def create_field(
     db.add(field)
     db.commit()
     db.refresh(field)
-    return field
+    return {
+        "id": field.id,
+        "name": field.name,
+        "working_width": field.working_width,
+        "speed_kmh": field.speed_kmh,
+        "fuel_lph": field.fuel_lph,
+        **area_values,
+    }
 
 
 #GET /fields - lista talhões do usuário 

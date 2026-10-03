@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useNewAreaSelection } from '@/features/map/NewAreaSelectionContext';
 import PremiumAccessNotice from '@/features/subscriptions/PremiumAccessNotice';
+import { formatAreaHectares } from '@/features/map/geographicArea';
 
 export default function NewArea() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function NewArea() {
   const [fuelPerKm, setFuelPerKm] = useState('2.5');
   const {
     cancelSelection,
+    areaHectares,
     isSelecting,
     requestUndoPoint,
     saveError,
@@ -53,7 +55,11 @@ export default function NewArea() {
     fieldSettings.working_width > 0 &&
     fieldSettings.speed_kmh > 0 &&
     fieldSettings.fuel_lph >= 0;
-  const canSave = selection?.isClosed && hasValidSettings && saveStatus !== 'saving';
+  const canSave =
+    selection?.isClosed &&
+    areaHectares !== null &&
+    hasValidSettings &&
+    saveStatus !== 'saving';
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -71,6 +77,16 @@ export default function NewArea() {
             ? 'Area fechada. Revise a selecao no mapa e salve quando estiver pronta.'
             : 'Clique no mapa para marcar os pontos. Clique no primeiro ponto para fechar a area.'}
         </p>
+        {selection?.isClosed && areaHectares !== null ? (
+          <p className="mt-2 inline-flex rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm font-semibold text-green-900">
+            Área selecionada: {formatAreaHectares(areaHectares)} ha
+          </p>
+        ) : null}
+        {selection?.isClosed && areaHectares === null ? (
+          <p role="alert" className="mt-2 text-sm text-red-700">
+            Não foi possível calcular a área: o polígono selecionado é inválido.
+          </p>
+        ) : null}
         {saveError ? <p className="mt-1 text-sm text-red-600">{saveError}</p> : null}
         {saveStatus === 'saved' ? (
           <p className="mt-1 text-sm text-green-700">Area salva e rota calculada.</p>
