@@ -3,7 +3,45 @@
 import { FormEvent, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import AuthLayout from '../AuthLayout';
+import styles from '../auth.module.css';
 import { register } from '@/features/auth/authService';
+
+function MailIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <rect x="2.5" y="4" width="15" height="12" rx="2" />
+      <path d="m3.5 5.5 6.5 5 6.5-5" />
+    </svg>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <rect x="3.5" y="8.5" width="13" height="9" rx="2" />
+      <path d="M6.5 8.5V6a3.5 3.5 0 0 1 7 0v2.5M10 12v2" />
+    </svg>
+  );
+}
+
+function EyeIcon({ hidden }: { hidden: boolean }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path d="M2 10s2.8-5 8-5 8 5 8 5-2.8 5-8 5-8-5-8-5Z" />
+      <circle cx="10" cy="10" r="2.2" />
+      {hidden ? <path d="m3 17 14-14" /> : null}
+    </svg>
+  );
+}
+
+function ArrowIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path d="M3.5 10h12m-5-5 5 5-5 5" />
+    </svg>
+  );
+}
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -37,83 +75,123 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-neutral-50 px-4 py-10">
-      <section className="w-full max-w-md">
-        <div className="mb-6">
-          <h1 className="text-xl font-semibold text-neutral-950">Criar conta</h1>
-          <p className="text-sm text-neutral-600">
-            Informe seus dados para acessar o AgroRoute.
-          </p>
-          {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
-        </div>
+    <AuthLayout headingId="register-heading">
+      <header className={styles.intro}>
+        <h1 id="register-heading">Crie sua conta</h1>
+        <p>Comece a gerenciar seus talhões e rotas de forma inteligente.</p>
+      </header>
 
-        <form onSubmit={handleSubmit} className="grid gap-3">
-          <label className="text-xs font-medium text-neutral-700">
-            E-mail
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="mt-1 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none transition focus:border-green-700"
-              placeholder="seu@email.com"
-              autoComplete="email"
-              required
-            />
-          </label>
+      <form className={styles.loginForm} onSubmit={handleSubmit}>
+        <label className={styles.field} htmlFor="email">
+          <span className={styles.visuallyHidden}>E-mail</span>
+          <span className={styles.fieldIcon}>
+            <MailIcon />
+          </span>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="E-mail"
+            autoComplete="email"
+            required
+            disabled={loading}
+          />
+        </label>
 
-          <label className="text-xs font-medium text-neutral-700">
-            Senha
-            <div className="mt-1 flex rounded border border-neutral-300 bg-white focus-within:border-green-700">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="min-w-0 flex-1 rounded bg-transparent px-3 py-2 text-sm text-neutral-900 outline-none"
-                placeholder="Minimo de 6 caracteres"
-                autoComplete="new-password"
-                minLength={6}
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((current) => !current)}
-                className="border-l border-neutral-200 px-3 text-xs font-medium text-neutral-600 transition hover:bg-neutral-100"
-              >
-                {showPassword ? 'Ocultar' : 'Mostrar'}
-              </button>
-            </div>
-          </label>
-
-          <label className="text-xs font-medium text-neutral-700">
-            Confirmar senha
-            <input
-              type={showPassword ? 'text' : 'password'}
-              value={confirm}
-              onChange={(event) => setConfirm(event.target.value)}
-              className="mt-1 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none transition focus:border-green-700"
-              placeholder="Repita sua senha"
-              autoComplete="new-password"
-              minLength={6}
-              required
-            />
-          </label>
-
+        <label className={styles.field} htmlFor="password">
+          <span className={styles.visuallyHidden}>Senha</span>
+          <span className={styles.fieldIcon}>
+            <LockIcon />
+          </span>
+          <input
+            id="password"
+            name="password"
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="Senha (mínimo de 6 caracteres)"
+            autoComplete="new-password"
+            minLength={6}
+            required
+            disabled={loading}
+          />
           <button
-            type="submit"
-            className="mt-2 rounded bg-green-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-green-800 disabled:cursor-not-allowed disabled:bg-neutral-400"
+            className={styles.passwordToggle}
+            type="button"
+            onClick={() => setShowPassword((current) => !current)}
+            aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+            aria-pressed={showPassword}
             disabled={loading}
           >
-            {loading ? 'Criando...' : 'Criar conta'}
+            <EyeIcon hidden={showPassword} />
           </button>
-        </form>
+        </label>
 
-        <div className="mt-4 flex items-center justify-between gap-3 text-sm">
-          <Link href="/login" className="font-medium text-green-700 transition hover:text-green-800">
+        <label className={styles.field} htmlFor="confirm">
+          <span className={styles.visuallyHidden}>Confirmar senha</span>
+          <span className={styles.fieldIcon}>
+            <LockIcon />
+          </span>
+          <input
+            id="confirm"
+            name="confirm"
+            type={showPassword ? 'text' : 'password'}
+            value={confirm}
+            onChange={(event) => setConfirm(event.target.value)}
+            placeholder="Confirmar senha"
+            autoComplete="new-password"
+            minLength={6}
+            required
+            disabled={loading}
+          />
+          <button
+            className={styles.passwordToggle}
+            type="button"
+            onClick={() => setShowPassword((current) => !current)}
+            aria-label={showPassword ? 'Ocultar senhas' : 'Mostrar senhas'}
+            aria-pressed={showPassword}
+            disabled={loading}
+          >
+            <EyeIcon hidden={showPassword} />
+          </button>
+        </label>
+
+        {error ? (
+          <p className={styles.errorMessage} role="alert">
+            {error}
+          </p>
+        ) : null}
+
+        <button className={styles.submitButton} type="submit" disabled={loading}>
+          {loading ? (
+            <>
+              <span className={styles.spinner} aria-hidden="true" />
+              Criando...
+            </>
+          ) : (
+            <>
+              Criar conta
+              <ArrowIcon />
+            </>
+          )}
+        </button>
+      </form>
+
+      <footer className={styles.footer}>
+        <p>
+          Já tem uma conta?{' '}
+          <Link href="/login" className={styles.registerLink}>
             Entrar
           </Link>
-          <span className="text-neutral-500">AgroRoute</span>
-        </div>
-      </section>
-    </main>
+        </p>
+        <p>
+          Ao continuar, você concorda com nossos
+          <br />
+          <span className={styles.legalText}>Termos de Serviço e Política de Privacidade</span>
+        </p>
+      </footer>
+    </AuthLayout>
   );
 }

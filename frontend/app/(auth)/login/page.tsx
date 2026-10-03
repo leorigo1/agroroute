@@ -1,38 +1,11 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { login } from '@/features/auth/authService';
-import styles from './login.module.css';
-
-function AgroRouteLogo() {
-  return (
-    <div className={styles.logo} aria-label="AgroRoute">
-      <svg viewBox="0 0 48 48" aria-hidden="true" className={styles.logoMark}>
-        <path
-          d="M5 41 19.2 9.3a5.2 5.2 0 0 1 9.6 0L43 41h-9.1L24 19.7 14.1 41H5Z"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="5.2"
-          strokeLinejoin="round"
-        />
-        <path
-          d="m16.7 31.7 7.3-5 7.3 5"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="3.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-      <span>
-        Agro<span className={styles.logoAccent}>Route</span>
-      </span>
-    </div>
-  );
-}
+import AuthLayout from '../AuthLayout';
+import styles from '../auth.module.css';
 
 function MailIcon() {
   return (
@@ -93,17 +66,6 @@ function GoogleIcon() {
   );
 }
 
-function DiscordIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M19.7 5.1A18 18 0 0 0 15.2 3.7l-.56 1.15a16.7 16.7 0 0 0-5.28 0L8.8 3.7a18 18 0 0 0-4.5 1.4C1.45 9.35.68 13.4 1.06 17.4a18.2 18.2 0 0 0 5.53 2.8l1.2-1.95a11.8 11.8 0 0 1-1.9-.92l.47-.36c3.67 1.7 7.65 1.7 11.28 0l.48.36a12 12 0 0 1-1.91.92l1.2 1.95a18.1 18.1 0 0 0 5.53-2.8c.45-4.63-.77-8.65-3.27-12.3ZM8.9 14.9c-1.08 0-1.96-.99-1.96-2.2s.86-2.2 1.96-2.2 1.98.99 1.96 2.2c0 1.21-.86 2.2-1.96 2.2Zm6.2 0c-1.08 0-1.96-.99-1.96-2.2s.86-2.2 1.96-2.2 1.98.99 1.96 2.2c0 1.21-.86 2.2-1.96 2.2Z"
-      />
-    </svg>
-  );
-}
-
 function AppleIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -151,174 +113,143 @@ export default function LoginPage() {
   }
 
   return (
-    <main className={styles.loginShell}>
-      <section className={styles.formPanel} aria-labelledby="login-heading">
-        <div className={styles.formContent}>
-          <AgroRouteLogo />
+    <AuthLayout headingId="login-heading">
+      <header className={styles.intro}>
+        <h1 id="login-heading">Bem-vindo de volta</h1>
+        <p>
+          Acesse sua conta para gerenciar seus talhões
+          <br className={styles.desktopBreak} /> e rotas de forma inteligente.
+        </p>
+      </header>
 
-          <header className={styles.intro}>
-            <h1 id="login-heading">Bem-vindo de volta</h1>
-            <p>
-              Acesse sua conta para gerenciar seus talhões
-              <br className={styles.desktopBreak} /> e rotas de forma inteligente.
-            </p>
-          </header>
+      <form className={styles.loginForm} onSubmit={handleSubmit}>
+        <label className={styles.field} htmlFor="email">
+          <span className={styles.visuallyHidden}>E-mail</span>
+          <span className={styles.fieldIcon}>
+            <MailIcon />
+          </span>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="E-mail"
+            autoComplete="email"
+            required
+            disabled={loading}
+          />
+        </label>
 
-          <form className={styles.loginForm} onSubmit={handleSubmit}>
-            <label className={styles.field} htmlFor="email">
-              <span className={styles.visuallyHidden}>E-mail</span>
-              <span className={styles.fieldIcon}>
-                <MailIcon />
-              </span>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="E-mail"
-                autoComplete="email"
-                required
-                disabled={loading}
-              />
-            </label>
+        <label className={styles.remember}>
+          <input type="checkbox" defaultChecked />
+          <span>Lembrar de mim</span>
+        </label>
 
-            <label className={styles.remember}>
-              <input type="checkbox" defaultChecked />
-              <span>Lembrar de mim</span>
-            </label>
+        <label className={styles.field} htmlFor="password">
+          <span className={styles.visuallyHidden}>Senha</span>
+          <span className={styles.fieldIcon}>
+            <LockIcon />
+          </span>
+          <input
+            id="password"
+            name="password"
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="Senha"
+            autoComplete="current-password"
+            required
+            disabled={loading}
+          />
+          <button
+            className={styles.passwordToggle}
+            type="button"
+            onClick={() => setShowPassword((current) => !current)}
+            aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+            aria-pressed={showPassword}
+            disabled={loading}
+          >
+            <EyeIcon hidden={showPassword} />
+          </button>
+        </label>
 
-            <label className={styles.field} htmlFor="password">
-              <span className={styles.visuallyHidden}>Senha</span>
-              <span className={styles.fieldIcon}>
-                <LockIcon />
-              </span>
-              <input
-                id="password"
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Senha"
-                autoComplete="current-password"
-                required
-                disabled={loading}
-              />
-              <button
-                className={styles.passwordToggle}
-                type="button"
-                onClick={() => setShowPassword((current) => !current)}
-                aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
-                aria-pressed={showPassword}
-                disabled={loading}
-              >
-                <EyeIcon hidden={showPassword} />
-              </button>
-            </label>
+        {error ? (
+          <p className={styles.errorMessage} role="alert">
+            {error}
+          </p>
+        ) : null}
 
-            {error ? (
-              <p className={styles.errorMessage} role="alert">
-                {error}
-              </p>
-            ) : null}
+        <button className={styles.submitButton} type="submit" disabled={loading}>
+          {loading ? (
+            <>
+              <span className={styles.spinner} aria-hidden="true" />
+              Entrando...
+            </>
+          ) : (
+            <>
+              Entrar
+              <ArrowIcon />
+            </>
+          )}
+        </button>
+      </form>
 
-            <button className={styles.submitButton} type="submit" disabled={loading}>
-              {loading ? (
-                <>
-                  <span className={styles.spinner} aria-hidden="true" />
-                  Entrando...
-                </>
-              ) : (
-                <>
-                  Entrar
-                  <ArrowIcon />
-                </>
-              )}
-            </button>
-          </form>
+      <div className={styles.divider} aria-hidden="true">
+        <span />
+        <span>ou</span>
+        <span />
+      </div>
 
-          <div className={styles.divider} aria-hidden="true">
-            <span />
-            <span>ou</span>
-            <span />
-          </div>
+      <div className={styles.providers} aria-label="Outras formas de entrar">
+        <button
+          className={styles.providerButton}
+          type="button"
+          disabled
+          title="Integração não disponível"
+        >
+          <span className={`${styles.providerIcon} ${styles.googleIcon}`}>
+            <GoogleIcon />
+          </span>
+          <span>Continuar com Google</span>
+        </button>
+        <button
+          className={styles.providerButton}
+          type="button"
+          disabled
+          title="Integração não disponível"
+        >
+          <span className={`${styles.providerIcon} ${styles.appleIcon}`}>
+            <AppleIcon />
+          </span>
+          <span>Continuar com Apple</span>
+        </button>
+        <button
+          className={`${styles.providerButton} ${styles.ssoButton}`}
+          type="button"
+          disabled
+          title="Integração não disponível"
+        >
+          <span className={`${styles.providerIcon} ${styles.ssoIcon}`}>
+            <UserIcon />
+          </span>
+          <span>Login único (SSO)</span>
+        </button>
+      </div>
 
-          <div className={styles.providers} aria-label="Outras formas de entrar">
-            <button
-              className={styles.providerButton}
-              type="button"
-              disabled
-              title="Integração não disponível"
-            >
-              <span className={`${styles.providerIcon} ${styles.googleIcon}`}>
-                <GoogleIcon />
-              </span>
-              <span>Continuar com Google</span>
-            </button>
-            <button
-              className={styles.providerButton}
-              type="button"
-              disabled
-              title="Integração não disponível"
-            >
-              <span className={`${styles.providerIcon} ${styles.discordIcon}`}>
-                <DiscordIcon />
-              </span>
-              <span>Continuar com Discord</span>
-            </button>
-            <button
-              className={styles.providerButton}
-              type="button"
-              disabled
-              title="Integração não disponível"
-            >
-              <span className={`${styles.providerIcon} ${styles.appleIcon}`}>
-                <AppleIcon />
-              </span>
-              <span>Continuar com Apple</span>
-            </button>
-            <button
-              className={`${styles.providerButton} ${styles.ssoButton}`}
-              type="button"
-              disabled
-              title="Integração não disponível"
-            >
-              <span className={`${styles.providerIcon} ${styles.ssoIcon}`}>
-                <UserIcon />
-              </span>
-              <span>Login único (SSO)</span>
-            </button>
-          </div>
-
-          <footer className={styles.footer}>
-            <p>
-              Ainda não tem uma conta?{' '}
-              <Link href="/register" className={styles.registerLink}>
-                Criar conta
-              </Link>
-            </p>
-            <p>
-              Ao continuar, você concorda com nossos
-              <br />
-              <span className={styles.legalText}>Termos de Serviço e Política de Privacidade</span>
-            </p>
-          </footer>
-        </div>
-      </section>
-
-      <aside
-        className={styles.heroPanel}
-        aria-label="Rotas inteligentes para um campo mais eficiente"
-      >
-        <Image
-          src="/agroroute-login-hero.png"
-          alt="Campo agrícola ao pôr do sol, com trator e rotas de precisão em verde"
-          fill
-          priority
-          sizes="(max-width: 760px) 0px, 60vw"
-          className={styles.heroImage}
-        />
-      </aside>
-    </main>
+      <footer className={styles.footer}>
+        <p>
+          Ainda não tem uma conta?{' '}
+          <Link href="/register" className={styles.registerLink}>
+            Criar conta
+          </Link>
+        </p>
+        <p>
+          Ao continuar, você concorda com nossos
+          <br />
+          <span className={styles.legalText}>Termos de Serviço e Política de Privacidade</span>
+        </p>
+      </footer>
+    </AuthLayout>
   );
 }
