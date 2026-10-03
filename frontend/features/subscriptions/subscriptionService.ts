@@ -12,6 +12,7 @@ export interface Subscription {
   currency: string;
   start_date: string | null;
   next_payment_date: string | null;
+  access_valid_until?: string | null;
   canceled_at: string | null;
 }
 

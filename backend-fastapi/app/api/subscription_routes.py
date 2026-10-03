@@ -168,6 +168,7 @@ def _subscription_response(subscription: Subscription | None) -> dict[str, Any] 
         "currency": subscription.currency,
         "start_date": subscription.start_date,
         "next_payment_date": subscription.next_payment_date,
+        "access_valid_until": subscription.next_payment_date,
         "canceled_at": subscription.canceled_at,
     }
 
@@ -416,7 +417,12 @@ def _sync_subscription_snapshot(
     )
 
 
-def _store_payment(db: Session, payment_data: dict[str, Any]) -> Subscription | None:
+def _store_payment(
+    db: Session,
+    payment_data: dict[str, Any],
+    *,
+    commit: bool = True,
+) -> Subscription | None:
     payment_id = payment_data.get("id")
     provider_subscription_id = payment_data.get("preapproval_id")
     external_reference = payment_data.get("external_reference")
@@ -510,8 +516,9 @@ def _store_payment(db: Session, payment_data: dict[str, Any]) -> Subscription | 
         } and local_subscription.status not in {"PAUSED", "CANCELED"}:
             local_subscription.status = "PAST_DUE"
 
-    db.commit()
-    db.refresh(local_subscription)
+    if commit:
+        db.commit()
+        db.refresh(local_subscription)
     return local_subscription
 
 
@@ -588,16 +595,23 @@ def _pix_payment_response(payment_data: dict[str, Any]) -> dict[str, Any]:
 def _existing_pix_payment(
     db: Session,
     subscription: Subscription,
+    *,
+    commit: bool = True,
 ) -> dict[str, Any] | None:
     payment = _latest_payment(db, subscription.id)
     if payment is None or payment.status != "pending":
         return None
     remote = mp_service.get_payment(payment.mercado_pago_payment_id)
-    _store_payment(db, remote)
+    _store_payment(db, remote, commit=commit)
     if str(remote.get("status", "")).lower() != "pending":
         return None
     expiration = _as_datetime(remote.get("date_of_expiration"))
     if expiration is not None and expiration <= datetime.now(timezone.utc):
+        payment.status = "expired"
+        payment.provider_updated_at = datetime.now(timezone.utc)
+        _sync_pix_entitlement(db, subscription)
+        if commit:
+            db.commit()
         return None
     return _pix_payment_response(remote)
 
@@ -744,7 +758,30 @@ def create_pix_payment(
     except MercadoPagoConfigurationError as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
 
-    db.query(User).filter(User.id == user.id).with_for_update().first()
+    locked_user = (
+        db.query(User)
+        .filter(User.id == user.id)
+        .with_for_update()
+        .first()
+    )
+    if locked_user is None:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
+    active_subscription = get_active_subscription(db, user.id)
+    if active_subscription is not None:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "SUBSCRIPTION_ALREADY_ACTIVE",
+                "message": "Você já possui uma assinatura Premium ativa.",
+                "valid_until": (
+                    active_subscription.next_payment_date.isoformat()
+                    if active_subscription.next_payment_date
+                    else None
+                ),
+            },
+        )
+
     subscription = (
         db.query(Subscription)
         .filter(
@@ -771,8 +808,7 @@ def create_pix_payment(
         )
         db.add(subscription)
         try:
-            db.commit()
-            db.refresh(subscription)
+            db.flush()
         except SQLAlchemyError as error:
             db.rollback()
             if isinstance(error, IntegrityError):
@@ -783,12 +819,43 @@ def create_pix_payment(
             raise
 
     try:
-        existing_pix = _existing_pix_payment(db, subscription)
+        existing_pix = _existing_pix_payment(
+            db,
+            subscription,
+            commit=False,
+        )
         if existing_pix is not None:
+            db.commit()
             return {
                 "subscription": _subscription_response(subscription),
                 "pix": existing_pix,
             }
+
+        refreshed_subscription = (
+            db.query(Subscription)
+            .filter(Subscription.id == subscription.id)
+            .first()
+        )
+        if refreshed_subscription is None:
+            raise MercadoPagoServiceError(
+                "A assinatura PIX local não foi encontrada após a consulta."
+            )
+        active_subscription = get_active_subscription(db, user.id)
+        if active_subscription is not None:
+            db.commit()
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "SUBSCRIPTION_ALREADY_ACTIVE",
+                    "message": "Você já possui uma assinatura Premium ativa.",
+                    "valid_until": (
+                        active_subscription.next_payment_date.isoformat()
+                        if active_subscription.next_payment_date
+                        else None
+                    ),
+                },
+            )
+        subscription = refreshed_subscription
 
         payment_count = (
             db.query(Payment)
@@ -823,7 +890,7 @@ def create_pix_payment(
             raise MercadoPagoServiceError(
                 "A resposta de criação não confirmou o pagamento PIX esperado."
             )
-        _store_payment(db, payment_data)
+        _store_payment(db, payment_data, commit=False)
         subscription = (
             db.query(Subscription)
             .filter(Subscription.id == subscription.id)
@@ -833,6 +900,7 @@ def create_pix_payment(
             raise MercadoPagoServiceError(
                 "A assinatura PIX local não foi encontrada após a cobrança."
             )
+        db.commit()
         return {
             "subscription": _subscription_response(subscription),
             "pix": _pix_payment_response(payment_data),

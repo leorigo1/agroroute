@@ -2,15 +2,18 @@ import asyncio
 import hashlib
 import hmac
 import json
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 import re
+import time
+from threading import Barrier, Lock
 
 import pytest
 from fastapi import HTTPException
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Query, Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.api import subscription_routes
@@ -260,6 +263,210 @@ def test_create_pix_payment_returns_provider_qr_and_uses_configured_price(
     }
     assert captured["idempotency_key"].startswith("agro-pix-")
     assert db.query(Payment).one().status == "pending"
+
+
+def test_active_pix_subscription_rejects_new_payment(db, monkeypatch):
+    user = make_user(db, "pix-active-block@agro.test")
+    subscription = make_pix_subscription(db, user, "ACTIVE")
+    subscription.next_payment_date = datetime.now(timezone.utc) + timedelta(days=10)
+    db.commit()
+    provider_calls = []
+    monkeypatch.setattr(
+        subscription_routes.mp_service,
+        "get_monthly_amount",
+        lambda: (8.99, "BRL"),
+    )
+    monkeypatch.setattr(
+        subscription_routes,
+        "_get_frontend_url",
+        lambda: "https://agro.test",
+    )
+    monkeypatch.setattr(
+        subscription_routes.mp_service,
+        "create_payment",
+        lambda *args, **kwargs: provider_calls.append((args, kwargs)),
+    )
+
+    with pytest.raises(HTTPException) as error:
+        subscription_routes.create_pix_payment(
+            subscription_routes.CreatePixPaymentRequest(cpf="12345678900"),
+            db,
+            user,
+        )
+
+    assert error.value.status_code == 409
+    assert error.value.detail["code"] == "SUBSCRIPTION_ALREADY_ACTIVE"
+    assert error.value.detail["valid_until"] == subscription.next_payment_date.isoformat()
+    assert provider_calls == []
+    assert db.query(Payment).count() == 0
+
+
+def test_expired_active_pix_period_allows_new_payment(db, monkeypatch):
+    user = make_user(db, "pix-expired-new-payment@agro.test")
+    subscription = make_pix_subscription(db, user, "ACTIVE")
+    subscription.next_payment_date = datetime.now(timezone.utc) - timedelta(days=1)
+    old_payment_date = datetime.now(timezone.utc) - timedelta(days=32)
+    db.add(
+        Payment(
+            subscription_id=subscription.id,
+            mercado_pago_payment_id="mp-pix-expired-period",
+            amount=Decimal("8.99"),
+            currency="BRL",
+            status="approved",
+            payment_date=old_payment_date,
+            provider_updated_at=old_payment_date,
+        )
+    )
+    db.commit()
+    monkeypatch.setattr(
+        subscription_routes.mp_service,
+        "get_monthly_amount",
+        lambda: (8.99, "BRL"),
+    )
+    monkeypatch.setattr(
+        subscription_routes,
+        "_get_frontend_url",
+        lambda: "https://agro.test",
+    )
+    monkeypatch.setattr(
+        subscription_routes.mp_service,
+        "create_payment",
+        lambda data, idempotency_key: {
+            "id": "mp-pix-after-expiry",
+            "status": "pending",
+            "payment_method_id": "pix",
+            "external_reference": data["external_reference"],
+            "transaction_amount": 8.99,
+            "currency_id": "BRL",
+            "date_created": datetime.now(timezone.utc).isoformat(),
+            "date_last_updated": datetime.now(timezone.utc).isoformat(),
+            "date_of_expiration": (
+                datetime.now(timezone.utc) + timedelta(minutes=30)
+            ).isoformat(),
+            "point_of_interaction": {
+                "transaction_data": {"qr_code": "pix-after-expiry"}
+            },
+        },
+    )
+
+    result = subscription_routes.create_pix_payment(
+        subscription_routes.CreatePixPaymentRequest(cpf="12345678900"),
+        db,
+        user,
+    )
+
+    assert result["subscription"]["status"] == "PAST_DUE"
+    assert result["pix"]["payment_id"] == "mp-pix-after-expiry"
+    assert db.query(Payment).count() == 2
+
+
+def test_simultaneous_pix_requests_reuse_one_charge(tmp_path, monkeypatch):
+    engine = create_engine(
+        f"sqlite:///{tmp_path / 'simultaneous-pix.sqlite'}",
+        connect_args={"check_same_thread": False, "timeout": 30},
+    )
+    Base.metadata.create_all(
+        bind=engine,
+        tables=[User.__table__, Subscription.__table__, Payment.__table__],
+    )
+    factory = sessionmaker(bind=engine)
+    with factory() as db:
+        user = make_user(db, "pix-simultaneous@agro.test")
+        user_id = user.id
+        user_email = user.email
+
+    user_lock = Lock()
+    original_with_for_update = Query.with_for_update
+
+    def serialize_user_lock(query, *args, **kwargs):
+        result = original_with_for_update(query, *args, **kwargs)
+        if query.column_descriptions[0].get("entity") is User:
+            user_lock.acquire()
+            query.session.info["test_user_row_lock"] = user_lock
+        return result
+
+    def release_user_lock(session):
+        lock = session.info.pop("test_user_row_lock", None)
+        if lock is not None:
+            lock.release()
+
+    monkeypatch.setattr(Query, "with_for_update", serialize_user_lock)
+    event.listen(Session, "after_commit", release_user_lock)
+    event.listen(Session, "after_rollback", release_user_lock)
+    monkeypatch.setattr(
+        subscription_routes.mp_service,
+        "get_monthly_amount",
+        lambda: (8.99, "BRL"),
+    )
+    monkeypatch.setattr(
+        subscription_routes,
+        "_get_frontend_url",
+        lambda: "https://agro.test",
+    )
+    create_calls = []
+    now = datetime.now(timezone.utc)
+    response_data = {
+        "id": "mp-pix-simultaneous",
+        "status": "pending",
+        "payment_method_id": "pix",
+        "transaction_amount": 8.99,
+        "currency_id": "BRL",
+        "date_created": now.isoformat(),
+        "date_last_updated": now.isoformat(),
+        "date_of_expiration": (now + timedelta(minutes=30)).isoformat(),
+        "point_of_interaction": {
+            "transaction_data": {
+                "qr_code": "one-pix-charge",
+                "qr_code_base64": "encoded-qr",
+            }
+        },
+    }
+    external_references = []
+
+    def create_payment(data, idempotency_key):
+        create_calls.append(idempotency_key)
+        external_references.append(data["external_reference"])
+        time.sleep(0.05)
+        return {
+            **response_data,
+            "external_reference": data["external_reference"],
+        }
+
+    monkeypatch.setattr(
+        subscription_routes.mp_service,
+        "create_payment",
+        create_payment,
+    )
+    monkeypatch.setattr(
+        subscription_routes.mp_service,
+        "get_payment",
+        lambda payment_id: {
+            **response_data,
+            "external_reference": external_references[0],
+        },
+    )
+    barrier = Barrier(2)
+
+    def request_pix():
+        with factory() as db:
+            barrier.wait()
+            return subscription_routes.create_pix_payment(
+                subscription_routes.CreatePixPaymentRequest(cpf="12345678900"),
+                db,
+                User(id=user_id, email=user_email, password="hash"),
+            )
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results = list(executor.map(lambda _: request_pix(), range(2)))
+        assert len(create_calls) == 1
+        assert results[0]["pix"]["payment_id"] == results[1]["pix"]["payment_id"]
+        with factory() as db:
+            assert db.query(Payment).count() == 1
+    finally:
+        event.remove(Session, "after_commit", release_user_lock)
+        event.remove(Session, "after_rollback", release_user_lock)
+        engine.dispose()
 
 
 def test_create_pix_payment_reuses_existing_pending_qr(db, monkeypatch):

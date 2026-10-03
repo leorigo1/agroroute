@@ -17,7 +17,7 @@ import {
 } from '@/features/subscriptions/subscriptionService';
 import SubscriptionCardForm from '@/features/subscriptions/SubscriptionCardForm';
 import PremiumAccessNotice from '@/features/subscriptions/PremiumAccessNotice';
-import { PREMIUM_ACCESS_UPDATED_EVENT } from '@/features/fields/fieldService';
+import { ApiError, PREMIUM_ACCESS_UPDATED_EVENT } from '@/features/fields/fieldService';
 
 const STATUS_LABELS: Record<SubscriptionStatus, string> = {
   PENDING: 'Pendente',
@@ -203,13 +203,27 @@ export default function SubscriptionPage() {
   }
 
   const canCreate = !subscription || subscription.status === 'CANCELED';
+  const accessValidUntil = subscription?.access_valid_until ?? subscription?.next_payment_date;
+  const activePremium =
+    subscription?.status === 'ACTIVE' &&
+    (subscription.payment_method === 'card' ||
+      Boolean(accessValidUntil && new Date(accessValidUntil).getTime() > Date.now()));
+  const activeAccessDate =
+    accessValidUntil && new Date(accessValidUntil).getTime() > Date.now()
+      ? accessValidUntil
+      : null;
   const canPayWithPix =
-    canCreate ||
+    !activePremium &&
+    (canCreate ||
     (subscription?.payment_method === 'pix' &&
-      ['PENDING', 'ACTIVE', 'PAST_DUE'].includes(subscription.status));
+      ['PENDING', 'ACTIVE', 'PAST_DUE'].includes(subscription.status)));
 
   async function generatePixPayment(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (activePremium) {
+      setSuccess('Sua assinatura Premium já está ativa. Não é necessário realizar um novo pagamento.');
+      return;
+    }
     setBusy(true);
     setError('');
     setSuccess('');
@@ -231,6 +245,15 @@ export default function SubscriptionPage() {
         setSuccess('PIX gerado. Aguardando confirmação do pagamento.');
       }
     } catch (requestError) {
+      if (
+        requestError instanceof ApiError &&
+        requestError.code === 'SUBSCRIPTION_ALREADY_ACTIVE'
+      ) {
+        await refreshSubscription();
+        setError('');
+        setSuccess('Sua assinatura Premium já está ativa. Não é necessário realizar um novo pagamento.');
+        return;
+      }
       console.error('Não foi possível gerar o PIX:', requestError);
       setError(
         requestError instanceof Error
@@ -352,7 +375,30 @@ export default function SubscriptionPage() {
         </dl>
       ) : null}
 
-      {!loading && canCreate ? (
+      {!loading && activePremium ? (
+        <section
+          role="status"
+          className="mt-6 rounded-xl border border-green-300 bg-green-50 p-5 text-green-950"
+        >
+          <h2 className="text-lg font-bold">Premium ativo ✓</h2>
+          <p className="mt-1">
+            Sua assinatura está ativa
+            {activeAccessDate
+              ? ` até ${new Intl.DateTimeFormat('pt-BR').format(new Date(activeAccessDate))}`
+              : ''}
+            .
+          </p>
+          <p className="mt-1 text-sm">Não é necessário realizar um novo pagamento neste momento.</p>
+          <button
+            type="button"
+            disabled
+            className="mt-4 cursor-not-allowed rounded-lg bg-neutral-300 px-4 py-3 text-sm font-semibold text-neutral-600"
+          >
+            PIX indisponível enquanto o Premium estiver ativo
+          </button>
+        </section>
+      ) : null}
+      {!loading && canCreate && !activePremium ? (
         <div className="mt-6 space-y-4">
           <div className="flex flex-wrap gap-3">
             <button

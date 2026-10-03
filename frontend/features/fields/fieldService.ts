@@ -7,6 +7,7 @@ export class ApiError extends Error {
     public readonly status: number,
     public readonly action: string,
     message: string,
+    public readonly code?: string,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -79,6 +80,28 @@ export async function buildApiError(res: Response, action: string): Promise<Erro
         window.location.assign('/subscription');
       }
       return new ApiError(res.status, action, 'É necessário possuir uma assinatura ativa.');
+    }
+  }
+
+  if (res.status === 409) {
+    const payload: unknown = await res
+      .clone()
+      .json()
+      .catch(() => null);
+    if (
+      typeof payload === 'object' &&
+      payload !== null &&
+      'detail' in payload &&
+      typeof payload.detail === 'object' &&
+      payload.detail !== null &&
+      'code' in payload.detail &&
+      payload.detail.code === 'SUBSCRIPTION_ALREADY_ACTIVE'
+    ) {
+      const message =
+        'message' in payload.detail && typeof payload.detail.message === 'string'
+          ? payload.detail.message
+          : 'Sua assinatura Premium já está ativa.';
+      return new ApiError(res.status, action, message, 'SUBSCRIPTION_ALREADY_ACTIVE');
     }
   }
 
