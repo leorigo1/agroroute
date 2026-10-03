@@ -22,7 +22,7 @@ export default function HeroCarousel() {
   }, []);
 
   return (
-    <div className={styles.heroCarousel} aria-hidden="true">
+    <div className={styles.heroCarousel}>
       {heroImages.map((src, index) => (
         <Image
           key={src}
@@ -36,6 +36,18 @@ export default function HeroCarousel() {
           className={`${styles.heroImage} ${activeImage === index ? styles.heroImageActive : ''}`}
         />
       ))}
+      <div className={styles.heroIndicators} role="group" aria-label="Imagens da seção">
+        {heroImages.map((src, index) => (
+          <button
+            key={src}
+            type="button"
+            className={`${styles.heroIndicator} ${activeImage === index ? styles.heroIndicatorActive : ''}`}
+            aria-label={`Exibir imagem ${index + 1}`}
+            aria-pressed={activeImage === index}
+            onClick={() => setActiveImage(index)}
+          />
+        ))}
+      </div>
     </div>
   );
 }

@@ -401,6 +401,39 @@
   opacity: 1;
 }
 
+.heroIndicators {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  bottom: 18px;
+  left: 0;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.heroIndicator {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+  transition: background-color 180ms ease, transform 180ms ease;
+}
+
+.heroIndicatorActive {
+  background: #fff;
+  transform: scale(1.15);
+}
+
+.heroIndicator:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
 .heroContent {
   position: absolute;
   z-index: 1;
@@ -470,7 +503,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .heroImage {
+  .heroImage,
+  .heroIndicator {
     transition-duration: 0.01ms;
   }
 }
