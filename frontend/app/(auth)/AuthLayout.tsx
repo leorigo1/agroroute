@@ -50,7 +50,7 @@ export default function AuthLayout({
         aria-label="Rotas inteligentes para um campo mais eficiente"
       >
         <Image
-          src="/agroroute-login-hero.png"
+          src="/agroroute-login-hero-hd.webp"
           alt="Campo agrícola ao pôr do sol, com trator e rotas de precisão em verde"
           fill
           priority
