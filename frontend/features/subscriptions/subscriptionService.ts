@@ -7,11 +7,25 @@ export interface Subscription {
   id: number;
   status: SubscriptionStatus;
   plan: string;
+  payment_method: 'card' | 'pix';
   amount: number;
   currency: string;
   start_date: string | null;
   next_payment_date: string | null;
   canceled_at: string | null;
+}
+
+export interface PixPayment {
+  payment_id: string;
+  qr_code: string | null;
+  qr_code_base64: string | null;
+  ticket_url: string | null;
+  expiration_date: string | null;
+}
+
+export interface PixPaymentResponse {
+  subscription: Subscription;
+  pix: PixPayment;
 }
 
 export interface MySubscriptionResponse {
@@ -41,6 +55,10 @@ export function getMySubscription(): Promise<MySubscriptionResponse> {
 
 export function createSubscription(cardTokenId: string): Promise<MySubscriptionResponse> {
   return subscriptionRequest('', 'criar assinatura', 'POST', { card_token_id: cardTokenId });
+}
+
+export function createPixPayment(cpf: string): Promise<PixPaymentResponse> {
+  return subscriptionRequest('/pix', 'gerar PIX', 'POST', { cpf });
 }
 
 export function cancelSubscription(): Promise<MySubscriptionResponse> {

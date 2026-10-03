@@ -1,11 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Image from 'next/image';
 import {
   cancelSubscription,
+  createPixPayment,
   getMySubscription,
   MySubscriptionResponse,
   pauseSubscription,
+  PixPayment,
   reactivateSubscription,
   Subscription,
   SubscriptionStatus,
@@ -25,12 +28,22 @@ function formatDate(value: string | null): string {
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' }).format(new Date(value));
 }
 
+function formatDateTime(value: string): string {
+  return new Intl.DateTimeFormat('pt-BR', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(new Date(value));
+}
+
 export default function SubscriptionPage() {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'pix' | null>(null);
+  const [cpf, setCpf] = useState('');
+  const [pixPayment, setPixPayment] = useState<PixPayment | null>(null);
 
   const refreshSubscription = useCallback(async () => {
     setError('');
@@ -77,6 +90,46 @@ export default function SubscriptionPage() {
   }
 
   const canCreate = !subscription || subscription.status === 'CANCELED';
+  const canPayWithPix =
+    canCreate ||
+    (subscription?.payment_method === 'pix' &&
+      ['PENDING', 'ACTIVE', 'PAST_DUE'].includes(subscription.status));
+
+  async function generatePixPayment(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setError('');
+    setSuccess('');
+    try {
+      const response = await createPixPayment(cpf);
+      setSubscription(response.subscription);
+      setPixPayment(response.pix);
+      setPaymentMethod('pix');
+      setSuccess(
+        'PIX gerado. O acesso Premium será liberado após a confirmação do pagamento.',
+      );
+    } catch (requestError) {
+      console.error('Não foi possível gerar o PIX:', requestError);
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'Não foi possível gerar o pagamento PIX.',
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function copyPixCode() {
+    if (!pixPayment?.qr_code) return;
+    try {
+      await navigator.clipboard.writeText(pixPayment.qr_code);
+      setSuccess('Código PIX copiado.');
+    } catch (copyError) {
+      console.error('Não foi possível copiar o código PIX:', copyError);
+      setError('Não foi possível copiar automaticamente. Selecione e copie o código PIX.');
+    }
+  }
 
   return (
     <main className="mx-auto w-full max-w-3xl rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm sm:p-8">
@@ -103,8 +156,8 @@ export default function SubscriptionPage() {
           <span className="ml-2 text-base font-medium text-neutral-600">/mês</span>
         </p>
         <p className="mt-2 text-sm text-neutral-600">
-          Cobrança recorrente processada pelo Mercado Pago. O acesso Premium só é liberado após
-          confirmação do pagamento.
+          No cartão, a cobrança é recorrente. No PIX, o pagamento é manual a cada mês. O acesso
+          Premium é liberado após a confirmação do pagamento.
         </p>
       </div>
 
@@ -136,7 +189,9 @@ export default function SubscriptionPage() {
             </dd>
           </div>
           <div>
-            <dt className="text-neutral-500">Próxima cobrança</dt>
+            <dt className="text-neutral-500">
+              {subscription.payment_method === 'pix' ? 'Acesso válido até' : 'Próxima cobrança'}
+            </dt>
             <dd className="mt-1 font-semibold text-neutral-900">
               {formatDate(subscription.next_payment_date)}
             </dd>
@@ -153,13 +208,135 @@ export default function SubscriptionPage() {
       ) : null}
 
       {!loading && canCreate ? (
-        <SubscriptionCardForm onCreated={() => void refreshSubscription()} />
+        <div className="mt-6 space-y-4">
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => setPaymentMethod('card')}
+              className={`rounded-lg border px-4 py-2 text-sm font-semibold ${
+                paymentMethod === 'card'
+                  ? 'border-green-700 bg-green-50 text-green-900'
+                  : 'border-neutral-300 text-neutral-800 hover:bg-neutral-50'
+              }`}
+            >
+              Cartão recorrente
+            </button>
+            <button
+              type="button"
+              onClick={() => setPaymentMethod('pix')}
+              className={`rounded-lg border px-4 py-2 text-sm font-semibold ${
+                paymentMethod === 'pix'
+                  ? 'border-green-700 bg-green-50 text-green-900'
+                  : 'border-neutral-300 text-neutral-800 hover:bg-neutral-50'
+              }`}
+            >
+              PIX mensal
+            </button>
+          </div>
+          {paymentMethod === 'card' ? (
+            <SubscriptionCardForm onCreated={() => void refreshSubscription()} />
+          ) : null}
+        </div>
       ) : null}
-
+      {!loading && canPayWithPix && (paymentMethod === 'pix' || !canCreate) ? (
+        <form onSubmit={generatePixPayment} className="mt-6 space-y-4">
+          <p className="text-sm text-neutral-700">
+            Gere um QR Code PIX de R$ 8,99. Cada pagamento confirmado libera 1 mês de Premium; a
+            renovação é manual.
+          </p>
+          <label
+            htmlFor="premium-pix-cpf"
+            className="block text-sm font-medium text-neutral-800"
+          >
+            CPF do pagador
+            <input
+              id="premium-pix-cpf"
+              type="text"
+              inputMode="numeric"
+              autoComplete="off"
+              value={cpf}
+              onChange={(event) => setCpf(event.target.value.replace(/\D/g, '').slice(0, 11))}
+              pattern="[0-9]{11}"
+              minLength={11}
+              maxLength={11}
+              required
+              className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={busy || cpf.length !== 11}
+            className="rounded-lg bg-green-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-green-800 disabled:cursor-wait disabled:opacity-60"
+          >
+            {busy ? 'Gerando PIX...' : 'Gerar / consultar QR Code PIX'}
+          </button>
+        </form>
+      ) : null}
+      {pixPayment ? (
+        <section className="mt-6 grid justify-items-center gap-4 rounded-xl border border-neutral-200 p-5">
+          <h2 className="text-lg font-semibold text-neutral-950">Pague com PIX</h2>
+          {pixPayment.qr_code_base64 ? (
+            <Image
+              src={`data:image/png;base64,${pixPayment.qr_code_base64}`}
+              alt="QR Code PIX para pagamento do AgroRoute Premium"
+              width={224}
+              height={224}
+              unoptimized
+              className="h-56 w-56"
+            />
+          ) : null}
+          {pixPayment.qr_code ? (
+            <div className="w-full space-y-2">
+              <label
+                htmlFor="premium-pix-code"
+                className="block text-sm font-medium text-neutral-800"
+              >
+                PIX copia e cola
+              </label>
+              <textarea
+                id="premium-pix-code"
+                readOnly
+                value={pixPayment.qr_code}
+                className="min-h-24 w-full resize-y rounded-lg border border-neutral-300 p-3 text-xs text-neutral-700"
+              />
+              <button
+                type="button"
+                onClick={() => void copyPixCode()}
+                className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-800 hover:bg-neutral-50"
+              >
+                Copiar código PIX
+              </button>
+            </div>
+          ) : null}
+          {pixPayment.expiration_date ? (
+            <p className="text-sm text-neutral-600">
+              Válido até {formatDateTime(pixPayment.expiration_date)}
+            </p>
+          ) : null}
+          {pixPayment.ticket_url ? (
+            <a
+              href={pixPayment.ticket_url}
+              target="_blank"
+              rel="noreferrer"
+              className="text-sm font-semibold text-green-800 underline"
+            >
+              Abrir detalhes do pagamento
+            </a>
+          ) : null}
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void refreshSubscription()}
+            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-800 hover:bg-neutral-50 disabled:opacity-60"
+          >
+            Já paguei — atualizar status
+          </button>
+        </section>
+      ) : null}
       {!loading && subscription?.status === 'PENDING' ? (
         <div className="mt-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-          Aguardando a confirmação do primeiro pagamento pelo Mercado Pago. Atualize o status para
-          consultar novamente.
+          Aguardando a confirmação do pagamento pelo Mercado Pago. Atualize o status para consultar
+          novamente.
         </div>
       ) : null}
       {!loading && subscription?.status === 'PAST_DUE' ? (
@@ -190,7 +367,7 @@ export default function SubscriptionPage() {
           >
             Atualizar status
           </button>
-          {subscription.status === 'ACTIVE' ? (
+          {subscription.payment_method === 'card' && subscription.status === 'ACTIVE' ? (
             <button
               type="button"
               disabled={busy}
@@ -200,7 +377,7 @@ export default function SubscriptionPage() {
               {busy ? 'Processando...' : 'Pausar assinatura'}
             </button>
           ) : null}
-          {subscription.status === 'PAUSED' ? (
+          {subscription.payment_method === 'card' && subscription.status === 'PAUSED' ? (
             <button
               type="button"
               disabled={busy}
@@ -210,18 +387,20 @@ export default function SubscriptionPage() {
               {busy ? 'Processando...' : 'Reativar assinatura'}
             </button>
           ) : null}
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => {
-              if (window.confirm('Deseja cancelar sua assinatura Premium?')) {
-                void performAction(cancelSubscription, 'Assinatura cancelada.');
-              }
-            }}
-            className="rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60"
-          >
-            {busy ? 'Processando...' : 'Cancelar assinatura'}
-          </button>
+          {subscription.payment_method === 'card' ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                if (window.confirm('Deseja cancelar sua assinatura Premium?')) {
+                  void performAction(cancelSubscription, 'Assinatura cancelada.');
+                }
+              }}
+              className="rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60"
+            >
+              {busy ? 'Processando...' : 'Cancelar assinatura'}
+            </button>
+          ) : null}
         </div>
       ) : null}
     </main>

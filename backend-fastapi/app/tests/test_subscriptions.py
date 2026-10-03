@@ -2,7 +2,7 @@ import asyncio
 import hashlib
 import hmac
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
@@ -58,6 +58,21 @@ def make_subscription(db, user: User, status: str = "PENDING") -> Subscription:
         user_id=user.id,
         mercado_pago_subscription_id="mp-sub-1",
         external_reference=f"agroroute:{user.id}:sub-1",
+        plan="PREMIUM_MONTHLY",
+        status=status,
+        amount=Decimal("8.99"),
+        currency="BRL",
+    )
+    db.add(subscription)
+    db.commit()
+    db.refresh(subscription)
+    return subscription
+
+
+def make_pix_subscription(db, user: User, status: str = "PENDING") -> Subscription:
+    subscription = Subscription(
+        user_id=user.id,
+        external_reference=f"agroroute:{user.id}:pix-sub",
         plan="PREMIUM_MONTHLY",
         status=status,
         amount=Decimal("8.99"),
@@ -167,6 +182,231 @@ def test_create_subscription_uses_backend_price_and_creates_pending(
     assert "user_id" not in captured
     assert captured["card_token_id"] == "temporary-token"
     assert db.query(Subscription).count() == 1
+
+
+def test_create_pix_payment_returns_provider_qr_and_uses_configured_price(
+    db,
+    monkeypatch,
+):
+    user = make_user(db, "pix@agro.test")
+    captured: dict = {}
+    monkeypatch.delenv("MP_PREMIUM_MONTHLY_AMOUNT", raising=False)
+    monkeypatch.setattr(
+        subscription_routes,
+        "_get_frontend_url",
+        lambda: "https://agro.test",
+    )
+
+    def create_payment(data, idempotency_key):
+        captured.update(data)
+        captured["idempotency_key"] = idempotency_key
+        return {
+            "id": "mp-pix-1",
+            "status": "pending",
+            "status_detail": "pending_waiting_payment",
+            "payment_method_id": "pix",
+            "external_reference": data["external_reference"],
+            "transaction_amount": 8.99,
+            "currency_id": "BRL",
+            "date_created": "2026-10-03T12:00:00Z",
+            "date_last_updated": "2026-10-03T12:00:00Z",
+            "date_of_expiration": "2026-10-03T12:30:00Z",
+            "point_of_interaction": {
+                "transaction_data": {
+                    "qr_code": "pix-copy-paste",
+                    "qr_code_base64": "encoded-image",
+                    "ticket_url": "https://agro.test/ticket",
+                }
+            },
+        }
+
+    monkeypatch.setattr(
+        subscription_routes.mp_service,
+        "create_payment",
+        create_payment,
+    )
+    result = subscription_routes.create_pix_payment(
+        subscription_routes.CreatePixPaymentRequest(cpf="123.456.789-00"),
+        db,
+        user,
+    )
+
+    assert result["subscription"]["status"] == "PENDING"
+    assert result["subscription"]["payment_method"] == "pix"
+    assert result["pix"]["qr_code"] == "pix-copy-paste"
+    assert result["pix"]["qr_code_base64"] == "encoded-image"
+    assert captured["transaction_amount"] == 8.99
+    assert captured["payment_method_id"] == "pix"
+    assert captured["payer"]["identification"] == {
+        "type": "CPF",
+        "number": "12345678900",
+    }
+    assert captured["idempotency_key"].startswith("agro-pix-")
+    assert db.query(Payment).one().status == "pending"
+
+
+def test_create_pix_payment_reuses_existing_pending_qr(db, monkeypatch):
+    user = make_user(db, "pix-reuse@agro.test")
+    subscription = make_pix_subscription(db, user)
+    payment = Payment(
+        subscription_id=subscription.id,
+        mercado_pago_payment_id="mp-pix-existing",
+        amount=Decimal("8.99"),
+        currency="BRL",
+        status="pending",
+        payment_date=datetime(2026, 10, 3, 12, tzinfo=timezone.utc),
+        provider_updated_at=datetime(2026, 10, 3, 12, tzinfo=timezone.utc),
+    )
+    db.add(payment)
+    db.commit()
+    monkeypatch.setattr(
+        subscription_routes.mp_service,
+        "get_monthly_amount",
+        lambda: (8.99, "BRL"),
+    )
+    monkeypatch.setattr(
+        subscription_routes,
+        "_get_frontend_url",
+        lambda: "https://agro.test",
+    )
+    monkeypatch.setattr(
+        subscription_routes.mp_service,
+        "create_payment",
+        lambda *_args, **_kwargs: pytest.fail(
+            "A valid pending PIX payment should be reused."
+        ),
+    )
+    monkeypatch.setattr(
+        subscription_routes.mp_service,
+        "get_payment",
+        lambda payment_id: {
+            "id": payment_id,
+            "status": "pending",
+            "payment_method_id": "pix",
+            "external_reference": subscription.external_reference,
+            "transaction_amount": 8.99,
+            "currency_id": "BRL",
+            "date_created": "2026-10-03T12:00:00Z",
+            "date_last_updated": "2026-10-03T12:00:00Z",
+            "date_of_expiration": "2026-10-04T12:30:00Z",
+            "point_of_interaction": {
+                "transaction_data": {"qr_code": "existing-pix-code"}
+            },
+        },
+    )
+
+    result = subscription_routes.create_pix_payment(
+        subscription_routes.CreatePixPaymentRequest(cpf="12345678900"),
+        db,
+        user,
+    )
+
+    assert result["pix"]["payment_id"] == "mp-pix-existing"
+    assert result["pix"]["qr_code"] == "existing-pix-code"
+    assert db.query(Payment).count() == 1
+
+
+def test_approved_pix_payment_activates_one_month_without_recurring_api(
+    db,
+    monkeypatch,
+):
+    user = make_user(db, "pix-approved@agro.test")
+    subscription = make_pix_subscription(db, user)
+    paid_at = datetime.now(timezone.utc)
+    monkeypatch.setattr(
+        subscription_routes.mp_service,
+        "get_subscription",
+        lambda *_args: pytest.fail("PIX has no recurring preapproval."),
+    )
+
+    result = subscription_routes._store_payment(
+        db,
+        {
+            "id": "mp-pix-approved",
+            "external_reference": subscription.external_reference,
+            "transaction_amount": 8.99,
+            "currency_id": "BRL",
+            "payment_method_id": "pix",
+            "status": "approved",
+            "date_created": paid_at.isoformat(),
+            "date_approved": paid_at.isoformat(),
+            "date_last_updated": paid_at.isoformat(),
+        },
+    )
+
+    assert result is not None
+    assert result.status == "ACTIVE"
+    assert result.next_payment_date is not None
+    assert result.next_payment_date.month == _next_month_number(paid_at.month)
+    assert db.query(Payment).one().status == "approved"
+
+
+def test_get_my_subscription_reconciles_pending_pix_payment(db, monkeypatch):
+    user = make_user(db, "pix-refresh@agro.test")
+    subscription = make_pix_subscription(db, user)
+    created_at = datetime.now(timezone.utc)
+    db.add(
+        Payment(
+            subscription_id=subscription.id,
+            mercado_pago_payment_id="mp-pix-refresh",
+            amount=Decimal("8.99"),
+            currency="BRL",
+            status="pending",
+            payment_date=created_at,
+            provider_updated_at=created_at,
+        )
+    )
+    db.commit()
+    monkeypatch.setattr(
+        subscription_routes.mp_service,
+        "get_payment",
+        lambda payment_id: {
+            "id": payment_id,
+            "external_reference": subscription.external_reference,
+            "transaction_amount": 8.99,
+            "currency_id": "BRL",
+            "payment_method_id": "pix",
+            "status": "approved",
+            "date_created": created_at.isoformat(),
+            "date_approved": created_at.isoformat(),
+            "date_last_updated": (created_at + timedelta(seconds=2)).isoformat(),
+        },
+    )
+
+    result = subscription_routes.get_my_subscription(db, user)
+
+    assert result["subscription"]["status"] == "ACTIVE"
+    assert db.query(Payment).one().status == "approved"
+
+
+def _next_month_number(month: int) -> int:
+    return month % 12 + 1
+
+
+def test_expired_pix_period_loses_premium_access(db):
+    user = make_user(db, "pix-expired@agro.test")
+    subscription = make_pix_subscription(db, user, "ACTIVE")
+    old_paid_at = datetime(2026, 7, 1, tzinfo=timezone.utc)
+    subscription.next_payment_date = datetime(2026, 8, 1, tzinfo=timezone.utc)
+    db.add(
+        Payment(
+            subscription_id=subscription.id,
+            mercado_pago_payment_id="mp-pix-expired",
+            amount=Decimal("8.99"),
+            currency="BRL",
+            status="approved",
+            payment_date=old_paid_at,
+            provider_updated_at=old_paid_at,
+        )
+    )
+    db.commit()
+
+    with pytest.raises(HTTPException) as error:
+        subscription_routes.get_current_premium_user(user, db)
+
+    assert error.value.status_code == 402
+    db.refresh(subscription)
+    assert subscription.status == "PAST_DUE"
 
 
 def test_create_subscription_rejects_duplicate_open_subscription(db, monkeypatch):

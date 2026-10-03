@@ -1,9 +1,11 @@
 # Assinatura AgroRoute Premium
 
-O checkout usa o SDK oficial MercadoPago.js no navegador apenas para tokenizar o
-cartão. O FastAPI recebe somente `card_token_id`, chama o SDK oficial Python e
-mantém assinatura e pagamentos no PostgreSQL. O Premium só é liberado após uma
-cobrança consultada diretamente no Mercado Pago com status `approved`.
+O checkout oferece assinatura recorrente mensal por cartão e pagamento mensal
+manual por PIX. O SDK oficial MercadoPago.js tokeniza o cartão no navegador; o
+FastAPI recebe somente `card_token_id` nesse fluxo. Para PIX, o FastAPI cria a
+cobrança no Mercado Pago e mostra o QR Code e o código copia e cola. O Premium
+só é liberado após confirmação de uma cobrança `approved` consultada no Mercado
+Pago.
 
 ## Variáveis de ambiente
 
@@ -45,7 +47,8 @@ em `NEXT_PUBLIC_*`, no Git ou na documentação.
 
 O navegador nunca envia número, CVV ou validade do cartão ao FastAPI. Esses
 campos são controlados pelo CardForm oficial; o FastAPI recebe somente o token
-temporário e o descarta após iniciar a assinatura.
+temporário e o descarta após iniciar a assinatura. No PIX, o CPF é enviado ao
+backend para compor a cobrança e não é armazenado pela aplicação.
 
 ## Webhook
 
@@ -65,9 +68,10 @@ recurso correspondente na API do Mercado Pago. Configure as notificações de:
 - `chargebacks`, se o produto/painel da conta oferecer esse tópico.
 
 O evento recebido não é considerado confirmação por si só. O backend busca o
-recurso na API, confere vínculo/valor/moeda e só libera Premium quando uma
-cobrança de valor e moeda esperados estiver `approved` e a assinatura remota
-estiver autorizada. Eventos repetidos atualizam o mesmo Payment pela
+recurso na API e confere vínculo, valor e moeda. No cartão, também confirma que
+a assinatura remota está autorizada. No PIX, cada pagamento aprovado concede
+um mês de acesso; a renovação é manual e o acesso expira se não houver outro
+pagamento aprovado. Eventos repetidos atualizam o mesmo Payment pela
 constraint única do ID de pagamento.
 
 Para verificar uma notificação, consulte os logs do backend e o painel de
@@ -82,9 +86,13 @@ token temporário do cartão.
 
 - `POST /api/subscriptions`: cria uma assinatura e mantém o estado local
   `PENDING`; o valor e o usuário são determinados pelo backend.
+- `POST /api/subscriptions/pix`: cria (ou recupera, se ainda estiver válido) um
+  pagamento PIX mensal de R$ 8,99 e retorna QR Code e código copia e cola. O QR
+  expira em 30 minutos; cada renovação mensal exige um novo pagamento.
 - `GET /api/subscriptions/me`: consulta o estado local da conta autenticada.
 - `POST /api/subscriptions/me/pause`, `/cancel` e `/reactivate`: altera a
-  assinatura remota e só grava a transição após confirmação do Mercado Pago.
+  assinatura recorrente por cartão e só grava a transição após confirmação do
+  Mercado Pago.
 - `GET /api/subscriptions/premium-test`: endpoint de verificação protegido por
   JWT e estado local `ACTIVE`.
 
@@ -93,6 +101,9 @@ de teste, confira `PENDING`, aguarde evento de cobrança aprovado e consulte
 `GET /api/subscriptions/me`. Teste também os eventos pendentes, rejeitados,
 duplicados e a rota Premium de teste. O endpoint Premium de teste não substitui
 uma política de acesso de produção a recursos do produto.
+No PIX, valide o QR e o copia e cola, simule uma confirmação no Mercado Pago e
+confirme que o período de acesso vence um mês após a aprovação; o QR vence em
+30 minutos e o usuário precisa pagar manualmente cada renovação.
 
 ## Produção
 

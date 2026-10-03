@@ -89,6 +89,18 @@ def get_payment(payment_id: str) -> dict[str, Any]:
     return _checked(_sdk().payment().get(payment_id))
 
 
+def create_payment(
+    payload: dict[str, Any],
+    idempotency_key: str | None = None,
+) -> dict[str, Any]:
+    sdk = _sdk()
+    if idempotency_key:
+        sdk.request_options.custom_headers = {
+            "x-idempotency-key": idempotency_key,
+        }
+    return _checked(sdk.payment().create(payload, sdk.request_options))
+
+
 def _get_resource(path: str) -> dict[str, Any]:
     sdk = _sdk()
     result = sdk.http_client.get(
@@ -133,6 +145,7 @@ __all__ = [
     "get_subscription",
     "update_subscription",
     "get_payment",
+    "create_payment",
     "get_authorized_payment",
     "get_chargeback",
     "get_monthly_amount",
