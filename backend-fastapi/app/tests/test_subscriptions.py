@@ -249,6 +249,7 @@ def test_create_pix_payment_returns_provider_qr_and_uses_configured_price(
     assert result["pix"]["qr_code_base64"] == "encoded-image"
     assert captured["transaction_amount"] == 8.99
     assert captured["payment_method_id"] == "pix"
+    assert result["pix"]["status"] == "pending"
     assert re.fullmatch(
         r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}-03:00",
         captured["date_of_expiration"],
@@ -392,7 +393,85 @@ def test_get_my_subscription_reconciles_pending_pix_payment(db, monkeypatch):
     result = subscription_routes.get_my_subscription(db, user)
 
     assert result["subscription"]["status"] == "ACTIVE"
+    assert result["pix_payment_status"] == "approved"
+    assert result["premium"] is True
     assert db.query(Payment).one().status == "approved"
+
+
+def test_get_my_subscription_marks_expired_pending_pix_payment(
+    db,
+    monkeypatch,
+):
+    user = make_user(db, "pix-expired-pending@agro.test")
+    subscription = make_pix_subscription(db, user)
+    created_at = datetime.now(timezone.utc) - timedelta(hours=1)
+    db.add(
+        Payment(
+            subscription_id=subscription.id,
+            mercado_pago_payment_id="mp-pix-old-pending",
+            amount=Decimal("8.99"),
+            currency="BRL",
+            status="pending",
+            payment_date=created_at,
+            provider_updated_at=created_at,
+        )
+    )
+    db.commit()
+    monkeypatch.setattr(
+        subscription_routes.mp_service,
+        "get_payment",
+        lambda payment_id: {
+            "id": payment_id,
+            "external_reference": subscription.external_reference,
+            "transaction_amount": 8.99,
+            "currency_id": "BRL",
+            "payment_method_id": "pix",
+            "status": "pending",
+            "date_created": created_at.isoformat(),
+            "date_last_updated": created_at.isoformat(),
+            "date_of_expiration": (
+                datetime.now(timezone.utc) - timedelta(minutes=1)
+            ).isoformat(),
+        },
+    )
+
+    result = subscription_routes.get_my_subscription(db, user)
+
+    assert result["pix_payment_status"] == "expired"
+    assert result["subscription"]["status"] == "PAST_DUE"
+    assert result["premium"] is False
+    assert db.query(Payment).one().status == "expired"
+
+
+@pytest.mark.parametrize(
+    "payment_status",
+    ["rejected", "cancelled", "expired"],
+)
+def test_get_my_subscription_exposes_non_success_pix_status(
+    db,
+    payment_status,
+):
+    user = make_user(db, f"pix-{payment_status}@agro.test")
+    subscription = make_pix_subscription(db, user, "PAST_DUE")
+    now = datetime.now(timezone.utc)
+    db.add(
+        Payment(
+            subscription_id=subscription.id,
+            mercado_pago_payment_id=f"mp-pix-{payment_status}",
+            amount=Decimal("8.99"),
+            currency="BRL",
+            status=payment_status,
+            payment_date=now,
+            provider_updated_at=now,
+        )
+    )
+    db.commit()
+
+    result = subscription_routes.get_my_subscription(db, user)
+
+    assert result["pix_payment_status"] == payment_status
+    assert result["subscription"]["status"] == "PAST_DUE"
+    assert result["premium"] is False
 
 
 def _next_month_number(month: int) -> int:

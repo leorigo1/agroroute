@@ -17,6 +17,7 @@ export interface Subscription {
 
 export interface PixPayment {
   payment_id: string;
+  status: string;
   qr_code: string | null;
   qr_code_base64: string | null;
   ticket_url: string | null;
@@ -30,6 +31,8 @@ export interface PixPaymentResponse {
 
 export interface MySubscriptionResponse {
   subscription: Subscription | null;
+  pix_payment_status?: string | null;
+  pix_payment_id?: string | null;
   premium?: boolean;
   free_usage_available?: boolean;
   free_usage_used?: boolean;

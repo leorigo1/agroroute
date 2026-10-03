@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   cancelSubscription,
   createPixPayment,
@@ -26,6 +27,33 @@ const STATUS_LABELS: Record<SubscriptionStatus, string> = {
   PAST_DUE: 'Pagamento pendente',
 };
 
+const PENDING_PIX_SESSION_KEY = 'agroroute_pending_pix_payment_id';
+
+function getPendingPixPaymentId(): string | null {
+  try {
+    return sessionStorage.getItem(PENDING_PIX_SESSION_KEY);
+  } catch (storageError) {
+    console.error('Não foi possível recuperar o estado local do pagamento PIX:', storageError);
+    return null;
+  }
+}
+
+function rememberPendingPixPayment(paymentId: string): void {
+  try {
+    sessionStorage.setItem(PENDING_PIX_SESSION_KEY, paymentId);
+  } catch (storageError) {
+    console.error('Não foi possível salvar o estado local do pagamento PIX:', storageError);
+  }
+}
+
+function forgetPendingPixPayment(): void {
+  try {
+    sessionStorage.removeItem(PENDING_PIX_SESSION_KEY);
+  } catch (storageError) {
+    console.error('Não foi possível remover o estado local do pagamento PIX:', storageError);
+  }
+}
+
 function formatDate(value: string | null): string {
   if (!value) return 'Ainda não informado';
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' }).format(new Date(value));
@@ -39,6 +67,7 @@ function formatDateTime(value: string): string {
 }
 
 export default function SubscriptionPage() {
+  const router = useRouter();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -47,12 +76,69 @@ export default function SubscriptionPage() {
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'pix' | null>(null);
   const [cpf, setCpf] = useState('');
   const [pixPayment, setPixPayment] = useState<PixPayment | null>(null);
+  const [pixPaymentStatus, setPixPaymentStatus] = useState<string | null>(null);
+  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+  const pixFlowActive = useRef(false);
+  const confirmationHandled = useRef(false);
+  const pollingRequest = useRef(false);
+
+  const confirmPayment = useCallback(() => {
+    if (confirmationHandled.current) return;
+    confirmationHandled.current = true;
+    setPaymentConfirmed(true);
+    setSuccess('');
+    setError('');
+    forgetPendingPixPayment();
+    window.dispatchEvent(new Event(PREMIUM_ACCESS_UPDATED_EVENT));
+    window.setTimeout(() => router.replace('/'), 2000);
+  }, [router]);
 
   const refreshSubscription = useCallback(async () => {
-    setError('');
     try {
       const response: MySubscriptionResponse = await getMySubscription();
       setSubscription(response.subscription);
+      setPixPaymentStatus(response.pix_payment_status ?? null);
+      const pendingPixPaymentId = getPendingPixPaymentId();
+      if (
+        response.subscription?.payment_method === 'pix' &&
+        response.pix_payment_id &&
+        pendingPixPaymentId === response.pix_payment_id
+      ) {
+        pixFlowActive.current = true;
+      }
+      if (
+        response.subscription?.payment_method === 'pix' &&
+        response.subscription.status === 'PENDING' &&
+        response.pix_payment_status === 'pending'
+      ) {
+        pixFlowActive.current = true;
+      }
+      if (
+        pixFlowActive.current &&
+        response.subscription?.payment_method === 'pix' &&
+        response.subscription.status === 'ACTIVE' &&
+        response.pix_payment_status === 'approved'
+      ) {
+        confirmPayment();
+      } else if (
+        response.pix_payment_status &&
+        ['rejected', 'cancelled', 'expired', 'refunded', 'charged_back'].includes(
+          response.pix_payment_status.toLowerCase(),
+        )
+      ) {
+        if (pendingPixPaymentId === response.pix_payment_id) {
+          forgetPendingPixPayment();
+        }
+        setPixPayment(null);
+        setError(
+          response.pix_payment_status.toLowerCase() === 'expired'
+            ? 'Este PIX expirou. Gere uma nova cobrança para tentar novamente.'
+            : 'O pagamento PIX não foi concluído. Você pode tentar novamente.',
+        );
+      } else {
+        setError('');
+      }
+      return response;
     } catch (requestError) {
       console.error('Não foi possível consultar a assinatura:', requestError);
       setError(
@@ -60,14 +146,37 @@ export default function SubscriptionPage() {
           ? requestError.message
           : 'Não foi possível consultar a assinatura.',
       );
+      return null;
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [confirmPayment]);
 
   useEffect(() => {
     void refreshSubscription();
   }, [refreshSubscription]);
+
+  useEffect(() => {
+    if (
+      !pixFlowActive.current ||
+      paymentConfirmed ||
+      subscription?.payment_method !== 'pix' ||
+      subscription.status !== 'PENDING' ||
+      pixPaymentStatus !== 'pending'
+    ) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      if (pollingRequest.current || confirmationHandled.current) return;
+      pollingRequest.current = true;
+      void refreshSubscription().finally(() => {
+        pollingRequest.current = false;
+      });
+    }, 5000);
+
+    return () => window.clearInterval(timer);
+  }, [paymentConfirmed, pixPaymentStatus, refreshSubscription, subscription]);
 
   async function performAction(
     action: () => Promise<MySubscriptionResponse>,
@@ -108,11 +217,19 @@ export default function SubscriptionPage() {
       const response = await createPixPayment(cpf);
       setSubscription(response.subscription);
       setPixPayment(response.pix);
+      setPixPaymentStatus(response.pix.status);
       setPaymentMethod('pix');
+      pixFlowActive.current = true;
+      rememberPendingPixPayment(response.pix.payment_id);
       window.dispatchEvent(new Event(PREMIUM_ACCESS_UPDATED_EVENT));
-      setSuccess(
-        'PIX gerado. O acesso Premium será liberado após a confirmação do pagamento.',
-      );
+      if (
+        response.pix.status.toLowerCase() === 'approved' &&
+        response.subscription.status === 'ACTIVE'
+      ) {
+        confirmPayment();
+      } else {
+        setSuccess('PIX gerado. Aguardando confirmação do pagamento.');
+      }
     } catch (requestError) {
       console.error('Não foi possível gerar o PIX:', requestError);
       setError(
@@ -300,7 +417,7 @@ export default function SubscriptionPage() {
           </button>
         </form>
       ) : null}
-      {pixPayment ? (
+      {pixPayment && !paymentConfirmed ? (
         <section className="mt-6 grid justify-items-center gap-4 rounded-xl border border-neutral-200 p-5">
           <h2 className="text-lg font-semibold text-neutral-950">Pague com PIX</h2>
           {pixPayment.qr_code_base64 ? (
@@ -351,6 +468,11 @@ export default function SubscriptionPage() {
               Abrir detalhes do pagamento
             </a>
           ) : null}
+          {pixPaymentStatus === 'pending' ? (
+            <p role="status" className="text-sm text-amber-800">
+              Aguardando confirmação do pagamento pelo Mercado Pago...
+            </p>
+          ) : null}
           <button
             type="button"
             disabled={busy}
@@ -361,13 +483,26 @@ export default function SubscriptionPage() {
           </button>
         </section>
       ) : null}
-      {!loading && subscription?.status === 'PENDING' ? (
-        <div className="mt-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-          Aguardando a confirmação do pagamento pelo Mercado Pago. Atualize o status para consultar
-          novamente.
+      {paymentConfirmed ? (
+        <div
+          role="alert"
+          className="mt-6 rounded-xl border border-green-300 bg-green-50 p-5 text-green-900"
+        >
+          <h2 className="text-lg font-bold">Pagamento realizado com sucesso!</h2>
+          <p className="mt-1">Sua assinatura Premium foi ativada.</p>
+          <p className="mt-1 text-sm">Redirecionando para o AgroRoute...</p>
         </div>
       ) : null}
-      {!loading && subscription?.status === 'PAST_DUE' ? (
+      {!paymentConfirmed &&
+      !loading &&
+      subscription?.payment_method === 'pix' &&
+      subscription.status === 'PENDING' ? (
+        <div className="mt-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          Aguardando a confirmação do pagamento pelo Mercado Pago. Esta página verificará o status
+          automaticamente.
+        </div>
+      ) : null}
+      {!paymentConfirmed && !loading && subscription?.status === 'PAST_DUE' ? (
         <div className="mt-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
           O último pagamento não foi confirmado. O acesso Premium está suspenso até uma cobrança
           aprovada.

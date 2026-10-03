@@ -250,7 +250,13 @@ def _sync_pix_entitlement(db: Session, subscription: Subscription) -> None:
                 .filter(
                     Payment.subscription_id == subscription.id,
                     Payment.status.in_(
-                        {"rejected", "cancelled", "refunded", "charged_back"}
+                        {
+                            "rejected",
+                            "cancelled",
+                            "expired",
+                            "refunded",
+                            "charged_back",
+                        }
                     ),
                 )
                 .first()
@@ -571,6 +577,7 @@ def _pix_payment_response(payment_data: dict[str, Any]) -> dict[str, Any]:
         )
     return {
         "payment_id": str(payment_data.get("id")),
+        "status": str(payment_data.get("status", "")).lower(),
         "qr_code": qr_code,
         "qr_code_base64": qr_code_base64,
         "ticket_url": transaction_data.get("ticket_url"),
@@ -664,6 +671,17 @@ def get_my_subscription(
                     latest_payment.mercado_pago_payment_id
                 )
                 _store_payment(db, remote_payment)
+                expiration = _as_datetime(remote_payment.get("date_of_expiration"))
+                if (
+                    str(remote_payment.get("status", "")).lower() == "pending"
+                    and expiration is not None
+                    and expiration <= datetime.now(timezone.utc)
+                ):
+                    latest_payment = _latest_payment(db, subscription.id)
+                    if latest_payment is not None:
+                        latest_payment.status = "expired"
+                        latest_payment.provider_updated_at = datetime.now(timezone.utc)
+                    _sync_pix_entitlement(db, subscription)
             except (
                 MercadoPagoError,
                 MercadoPagoConfigurationError,
@@ -685,6 +703,8 @@ def get_my_subscription(
             if refreshed_subscription is None:
                 return {
                     "subscription": None,
+                    "pix_payment_status": None,
+                    "pix_payment_id": None,
                     **get_premium_access_state(db, user.id),
                 }
             subscription = refreshed_subscription
@@ -696,8 +716,18 @@ def get_my_subscription(
         ):
             subscription.status = "PAST_DUE"
         db.commit()
+    latest_payment = (
+        _latest_payment(db, subscription.id)
+        if subscription is not None
+        and subscription.mercado_pago_subscription_id is None
+        else None
+    )
     return {
         "subscription": _subscription_response(subscription),
+        "pix_payment_status": latest_payment.status if latest_payment else None,
+        "pix_payment_id": (
+            latest_payment.mercado_pago_payment_id if latest_payment else None
+        ),
         **get_premium_access_state(db, user.id),
     }
 
