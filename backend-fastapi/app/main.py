@@ -17,7 +17,7 @@ import app.models.routes_model
 import os
 
 
-app = FastAPI(title="AgroRoute API")
+app = FastAPI(title="AgroRoute API", root_path="/api")
 
 configured_frontend_origins = [
     origin.strip()

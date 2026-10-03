@@ -180,15 +180,20 @@ O consumo da máquina é informado em litros por hora (`fuel_lph`). A API ainda
 aceita `fuel_per_km` como nome legado no envio de novos talhões, mas responde com
 o nome `fuel_lph`; a coluna antiga do banco é mantida para evitar migração.
 
-## Deploy do frontend na Vercel
+## Deploy na Vercel
 
-O frontend Next.js e a API FastAPI são serviços separados. Na Vercel, configure
-`frontend/` como diretório raiz do projeto. O valor padrão de
-`NEXT_PUBLIC_API_URL` fica em `frontend/.env.production`; ele pode ser
-sobrescrito nas variáveis de ambiente do projeto Vercel. Alterações nessa
-variável exigem um novo deploy para serem incluídas no bundle do frontend.
+O arquivo `vercel.json` na raiz configura `frontend/` (Next.js) e
+`backend-fastapi/` (FastAPI) como serviços do mesmo projeto. O frontend é o
+serviço público padrão; requisições em `/api/*` são roteadas para o backend.
+No painel da Vercel, conecte um único projeto ao repositório e defina
+`Root Directory` como a raiz do repositório (`.`), para que a Vercel carregue
+esse `vercel.json` e construa os dois serviços.
+O frontend usa `/api` como base da API em produção e `http://localhost:8000/api`
+em desenvolvimento. O backend configura esse prefixo como `root_path` para
+manter seus endpoints existentes (`/auth`, `/fields`) acessíveis por `/api/auth`
+e `/api/fields` no domínio público.
 
-No projeto Vercel da API, use `backend-fastapi/` como diretório raiz. Configure:
+Configure no projeto Vercel:
 
 - `FRONTEND_ORIGINS`: origem exata do frontend, por exemplo
   `https://agroroute.vercel.app` (já permitida por padrão; valores configurados
@@ -201,8 +206,8 @@ No projeto Vercel da API, use `backend-fastapi/` como diretório raiz. Configure
   `psycopg2` declarado nas dependências, inclusive se a URL recebida indicar
   `postgresql+psycopg://`.
 
-Em desenvolvimento, o frontend usa `http://localhost:8000`. A API atualmente
-precisa de um banco PostGIS acessível para iniciar.
+O valor `DATABASE_URL` do Docker Compose usa o host interno `db` e não deve ser
+copiado para a Vercel. A API precisa de um banco PostGIS acessível pela Vercel.
 
 ## Problemas comuns
 
