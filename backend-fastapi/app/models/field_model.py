@@ -16,7 +16,7 @@ class Field(Base):
 
     working_width = Column(Float, nullable=False)   # largura de trabalho em metros
     speed_kmh = Column(Float, nullable=False)        # velocidade operacional
-    fuel_per_km = Column(Float, nullable=False)      # consumo L/km
+    fuel_lph = Column("fuel_per_km", Float, nullable=False)  # consumo L/h
 
     created_at = Column(DateTime, default=datetime.utcnow)
 

@@ -176,6 +176,29 @@ As rotas de `/fields` precisam de autenticação:
 Authorization: Bearer <token>
 ```
 
+O consumo da máquina é informado em litros por hora (`fuel_lph`). A API ainda
+aceita `fuel_per_km` como nome legado no envio de novos talhões, mas responde com
+o nome `fuel_lph`; a coluna antiga do banco é mantida para evitar migração.
+
+## Deploy do frontend na Vercel
+
+O frontend Next.js e a API FastAPI são serviços separados. Na Vercel, configure
+`frontend/` como diretório raiz do projeto. O valor padrão de
+`NEXT_PUBLIC_API_URL` fica em `frontend/.env.production`; ele pode ser
+sobrescrito nas variáveis de ambiente do projeto Vercel. Alterações nessa
+variável exigem um novo deploy para serem incluídas no bundle do frontend.
+
+No projeto Vercel da API, use `backend-fastapi/` como diretório raiz. Configure:
+
+- `FRONTEND_ORIGINS`: origem exata do frontend, por exemplo
+  `https://seu-projeto.vercel.app`. Para mais de uma origem, separe-as por vírgula.
+- `DATABASE_URL`: URL de conexão do banco PostgreSQL/PostGIS. Em Docker Compose,
+  o valor local já aponta para o serviço `db`; em produção, use as credenciais e
+  o endereço fornecidos por um provedor de banco compatível com PostGIS.
+
+Em desenvolvimento, o frontend usa `http://localhost:8000`. A API atualmente
+precisa de um banco PostGIS acessível para iniciar.
+
 ## Problemas comuns
 
 ### Token inválido ou expirado
@@ -184,7 +207,8 @@ Faça login novamente. O frontend remove o token antigo quando a API responde co
 
 ### Backend não conecta no banco fora do Docker
 
-O backend usa o host `db`, que existe dentro do Docker Compose. Se você tentar rodar a API fora do Docker, provavelmente vai precisar ajustar a conexão em `backend-fastapi/app/database/database.py`.
+No Docker Compose, o backend usa o host `db`. Fora do Docker, configure
+`DATABASE_URL` para apontar ao banco acessível pelo ambiente.
 
 ### Porta ocupada
 

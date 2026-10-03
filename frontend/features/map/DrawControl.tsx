@@ -133,7 +133,7 @@ export default function DrawControl() {
           coordinates: innerBoundaryCoordinates,
           working_width: 6,
           speed_kmh: 8,
-          fuel_per_km: 2.5,
+          fuel_lph: 2.5,
         });
 
         const route = await calculateRoute(field.id);

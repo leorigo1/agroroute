@@ -66,5 +66,5 @@ def machine_params():
     return {
         "working_width_m": 6.0,
         "speed_kmh": 8.0,
-        "fuel_per_km": 2.5,
+        "fuel_lph": 2.5,
     }

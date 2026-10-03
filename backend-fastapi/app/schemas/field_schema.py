@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import AliasChoices, BaseModel, Field
 
 
 # --- entrada ao criar um talhão ---
@@ -7,7 +7,9 @@ class FieldCreate(BaseModel):
     coordinates: list[list[float]]  # [[lon, lat], [lon, lat], ...]
     working_width: float             # metros
     speed_kmh: float
-    fuel_per_km: float
+    fuel_lph: float = Field(
+        validation_alias=AliasChoices("fuel_lph", "fuel_per_km")
+    )
 
 
 # --- saída básica de um talhão ---
@@ -16,7 +18,7 @@ class FieldOut(BaseModel):
     name: str
     working_width: float
     speed_kmh: float
-    fuel_per_km: float
+    fuel_lph: float
 
     class Config:
         from_attributes = True

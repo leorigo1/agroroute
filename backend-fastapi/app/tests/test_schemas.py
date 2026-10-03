@@ -47,7 +47,7 @@ class TestFieldCreateSchema:
             ],
             "working_width": 6.0,
             "speed_kmh": 8.0,
-            "fuel_per_km": 2.5,
+            "fuel_lph": 2.5,
         }
 
     def test_valid_field(self):
@@ -83,7 +83,13 @@ class TestFieldCreateSchema:
         field = FieldCreate(**self._valid_payload())
         assert isinstance(field.working_width, float)
         assert isinstance(field.speed_kmh, float)
-        assert isinstance(field.fuel_per_km, float)
+        assert isinstance(field.fuel_lph, float)
+
+    def test_accepts_legacy_fuel_per_km_name(self):
+        payload = self._valid_payload()
+        payload["fuel_per_km"] = payload.pop("fuel_lph")
+        field = FieldCreate(**payload)
+        assert field.fuel_lph == 2.5
 
 
 # RouteOut
@@ -134,7 +140,7 @@ class TestFieldDetailSchema:
             name="Talhão B",
             working_width=6.0,
             speed_kmh=8.0,
-            fuel_per_km=2.5,
+            fuel_lph=2.5,
             coordinates=[[-52.58, -27.62], [-52.57, -27.62]],
         )
         assert len(detail.coordinates) == 2
@@ -146,5 +152,5 @@ class TestFieldDetailSchema:
                 name="Talhão B",
                 working_width=6.0,
                 speed_kmh=8.0,
-                fuel_per_km=2.5,
+                fuel_lph=2.5,
             )

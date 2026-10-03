@@ -87,7 +87,7 @@ class TestFieldModel:
             polygon="POLYGON((-52.58 -27.62, -52.57 -27.62, -52.57 -27.63, -52.58 -27.63, -52.58 -27.62))",
             working_width=6.0,
             speed_kmh=8.0,
-            fuel_per_km=2.5,
+            fuel_lph=2.5,
         )
         db.add(field)
         db.commit()
@@ -101,7 +101,7 @@ class TestFieldModel:
             polygon="POLYGON((-52.58 -27.62, -52.57 -27.62, -52.57 -27.63, -52.58 -27.63, -52.58 -27.62))",
             working_width=6.0,
             speed_kmh=8.0,
-            fuel_per_km=2.5,
+            fuel_lph=2.5,
         )
         db.add(field)
         db.commit()
@@ -117,14 +117,14 @@ class TestFieldModel:
             polygon="POLYGON((-52.58 -27.62, -52.57 -27.62, -52.57 -27.63, -52.58 -27.63, -52.58 -27.62))",
             working_width=12.0,
             speed_kmh=10.0,
-            fuel_per_km=3.0,
+            fuel_lph=3.0,
         )
         db.add(field)
         db.commit()
         fetched = db.query(Field).filter(Field.name == "Talhão Sul").first()
         assert fetched.working_width == 12.0
         assert fetched.speed_kmh == 10.0
-        assert fetched.fuel_per_km == 3.0
+        assert fetched.fuel_lph == 3.0
 
     def test_field_belongs_to_user(self, db):
         user = self._create_user(db, "f4@agro.com")
@@ -134,7 +134,7 @@ class TestFieldModel:
             polygon="POLYGON((-52.58 -27.62, -52.57 -27.62, -52.57 -27.63, -52.58 -27.63, -52.58 -27.62))",
             working_width=6.0,
             speed_kmh=8.0,
-            fuel_per_km=2.5,
+            fuel_lph=2.5,
         )
         db.add(field)
         db.commit()
@@ -154,7 +154,7 @@ class TestRouteModel:
             polygon="POLYGON((-52.58 -27.62, -52.57 -27.62, -52.57 -27.63, -52.58 -27.63, -52.58 -27.62))",
             working_width=6.0,
             speed_kmh=8.0,
-            fuel_per_km=2.5,
+            fuel_lph=2.5,
         )
         db.add(field)
         db.commit()

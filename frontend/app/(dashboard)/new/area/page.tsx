@@ -31,7 +31,7 @@ export default function NewArea() {
   }, [cancelSelection, startSelection]);
 
   const fieldSettings = useMemo(() => ({
-    fuel_per_km: Number(fuelPerKm),
+    fuel_lph: Number(fuelPerKm),
     name: name.trim(),
     speed_kmh: Number(speedKmh),
     working_width: Number(workingWidth),
@@ -51,7 +51,7 @@ export default function NewArea() {
     fieldSettings.name.length > 0 &&
     fieldSettings.working_width > 0 &&
     fieldSettings.speed_kmh > 0 &&
-    fieldSettings.fuel_per_km >= 0;
+    fieldSettings.fuel_lph >= 0;
   const canSave = selection?.isClosed && hasValidSettings && saveStatus !== 'saving';
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -112,7 +112,7 @@ export default function NewArea() {
           />
         </label>
         <label className="text-xs font-medium text-neutral-700">
-          Combustivel (L/hr)
+          Combustivel (L/h)
           <input
             type="number"
             min="0"

@@ -78,7 +78,7 @@ def create_field(
         polygon=from_shape(polygon, srid=4326),
         working_width=payload.working_width,
         speed_kmh=payload.speed_kmh,
-        fuel_per_km=payload.fuel_per_km,
+        fuel_lph=payload.fuel_lph,
     )
     db.add(field)
     db.commit()
@@ -114,7 +114,7 @@ def get_field(
         name=field.name,
         working_width=field.working_width,
         speed_kmh=field.speed_kmh,
-        fuel_per_km=field.fuel_per_km,
+        fuel_lph=field.fuel_lph,
         coordinates=coords,
     )
 
@@ -137,7 +137,7 @@ def calculate_route(
         polygon,
         working_width_m=field.working_width,
         speed_kmh=field.speed_kmh,
-        fuel_lph=field.fuel_per_km,
+        fuel_lph=field.fuel_lph,
     )
 
     if not swaths:

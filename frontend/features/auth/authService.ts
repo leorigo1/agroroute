@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+import { getApiUrl } from '@/features/apiConfig';
 
 export interface AuthCredentials {
   email: string;
@@ -11,7 +11,7 @@ export interface LoginResponse {
 }
 
 export async function login(credentials: AuthCredentials): Promise<LoginResponse> {
-  const res = await fetch(`${API_URL}/auth/login`, {
+  const res = await fetch(`${getApiUrl()}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(credentials),
@@ -30,7 +30,7 @@ export async function login(credentials: AuthCredentials): Promise<LoginResponse
 }
 
 export async function register(credentials: AuthCredentials): Promise<unknown> {
-  const res = await fetch(`${API_URL}/auth/register`, {
+  const res = await fetch(`${getApiUrl()}/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(credentials),

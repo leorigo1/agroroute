@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+import { getApiUrl } from '@/features/apiConfig';
 
 export class ApiError extends Error {
   constructor(
@@ -16,7 +16,7 @@ export interface CreateFieldPayload {
   coordinates: number[][];
   working_width: number;
   speed_kmh: number;
-  fuel_per_km: number;
+  fuel_lph: number;
 }
 
 export interface FieldResponse {
@@ -25,7 +25,7 @@ export interface FieldResponse {
   coordinates?: number[][];
   working_width: number;
   speed_kmh?: number;
-  fuel_per_km?: number;
+  fuel_lph: number;
   [key: string]: unknown;
 }
 
@@ -75,7 +75,7 @@ export function isAuthExpiredError(error: unknown): boolean {
 }
 
 export async function createField(payload: CreateFieldPayload): Promise<FieldResponse> {
-  const res = await fetch(`${API_URL}/fields/`, {
+  const res = await fetch(`${getApiUrl()}/fields/`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(payload),
@@ -88,7 +88,7 @@ export async function createField(payload: CreateFieldPayload): Promise<FieldRes
 }
 
 export async function calculateRoute(fieldId: string | number): Promise<RouteResponse> {
-  const res = await fetch(`${API_URL}/fields/${fieldId}/calculate`, {
+  const res = await fetch(`${getApiUrl()}/fields/${fieldId}/calculate`, {
     method: 'POST',
     headers: getHeaders(),
   });
@@ -100,7 +100,7 @@ export async function calculateRoute(fieldId: string | number): Promise<RouteRes
 }
 
 export async function listFields(): Promise<FieldResponse[]> {
-  const res = await fetch(`${API_URL}/fields/`, {
+  const res = await fetch(`${getApiUrl()}/fields/`, {
     method: 'GET',
     headers: getHeaders(),
   });
@@ -112,7 +112,7 @@ export async function listFields(): Promise<FieldResponse[]> {
 }
 
 export async function getField(fieldId: string | number): Promise<FieldResponse> {
-  const res = await fetch(`${API_URL}/fields/${fieldId}`, {
+  const res = await fetch(`${getApiUrl()}/fields/${fieldId}`, {
     method: 'GET',
     headers: getHeaders(),
   });
@@ -124,7 +124,7 @@ export async function getField(fieldId: string | number): Promise<FieldResponse>
 }
 
 export async function getRoute(fieldId: string | number): Promise<RouteResponse | null> {
-  const res = await fetch(`${API_URL}/fields/${fieldId}/route`, {
+  const res = await fetch(`${getApiUrl()}/fields/${fieldId}/route`, {
     method: 'GET',
     headers: getHeaders(),
   });
