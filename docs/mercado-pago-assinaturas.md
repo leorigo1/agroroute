@@ -7,14 +7,16 @@ cobrança consultada diretamente no Mercado Pago com status `approved`.
 
 ## Variáveis de ambiente
 
-Configure no serviço backend:
+Configure no serviço backend (na Vercel, em **Settings → Environment Variables**;
+os arquivos `.env.example` são apenas exemplos locais e não definem variáveis no
+deploy):
 
 | Nome | Finalidade |
 | --- | --- |
 | `MP_ACCESS_TOKEN` | Credencial privada usada pelo SDK Python. Nunca exponha ao frontend. |
 | `MP_WEBHOOK_SECRET` | Segredo usado para validar HMAC das notificações. |
 | `MP_PREMIUM_MONTHLY_AMOUNT` | Valor mensal em reais; padrão `8.99` (R$ 8,99/mês). |
-| `FRONTEND_URL` | Origem pública do frontend, usada no retorno e na URL de notificação. |
+| `FRONTEND_URL` | Origem pública do frontend, usada no retorno e na URL de notificação. Em produção: `https://agroroute.vercel.app`. |
 
 Configure no frontend:
 
@@ -33,7 +35,8 @@ em `NEXT_PUBLIC_*`, no Git ou na documentação.
 2. Configure o Access Token de teste e a Public Key de teste nos ambientes
    backend e frontend, respectivamente.
 3. Configure `MP_PREMIUM_MONTHLY_AMOUNT=8.99` e `FRONTEND_URL` para a origem
-   que o navegador utiliza.
+   que o navegador utiliza (por exemplo, `https://agroroute.vercel.app` em
+   produção).
 4. O backend precisa alcançar o PostgreSQL/PostGIS de desenvolvimento e o
    frontend precisa alcançar `/api`.
 5. Use somente os cartões de teste e os usuários de teste documentados no
@@ -70,7 +73,10 @@ constraint única do ID de pagamento.
 Para verificar uma notificação, consulte os logs do backend e o painel de
 notificações do Mercado Pago. Um evento sem assinatura válida é rejeitado sem
 alterar o banco. Erros temporários ao consultar a API retornam erro HTTP para
-que o provedor possa tentar novamente.
+que o provedor possa tentar novamente. Se a criação de assinatura responder
+com `502`, consulte os logs do backend: o erro registra o status HTTP e os
+códigos/mensagens de diagnóstico retornados pelo Mercado Pago, sem registrar o
+token temporário do cartão.
 
 ## Ciclo de assinatura
 
@@ -95,7 +101,8 @@ Antes de habilitar cobranças reais:
 1. Troque `MP_ACCESS_TOKEN` e `NEXT_PUBLIC_MP_PUBLIC_KEY` pelas credenciais de
    produção correspondentes à mesma conta.
 2. Configure o segredo de webhook de produção em `MP_WEBHOOK_SECRET`.
-3. Atualize `FRONTEND_URL` para o domínio HTTPS de produção.
+3. Defina `FRONTEND_URL=https://agroroute.vercel.app` (ou o domínio HTTPS
+   configurado para o frontend) no ambiente do backend.
 4. Configure a URL HTTPS do webhook no painel de produção e valide a entrega
    com uma cobrança de baixo risco autorizada.
 5. Restrinja a Public Key no painel, quando essa opção estiver disponível.

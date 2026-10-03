@@ -19,6 +19,7 @@ from app.models.payment_model import Payment
 from app.models.routes_model import Route
 from app.models.subscription_model import Subscription
 from app.models.user_model import User
+from app.services import mercadopago_service
 
 
 @pytest.fixture
@@ -106,6 +107,31 @@ def test_monthly_amount_uses_environment_configuration(monkeypatch):
     monkeypatch.setenv("MP_PREMIUM_MONTHLY_AMOUNT", "12.34")
 
     assert subscription_routes.mp_service.get_monthly_amount() == (12.34, "BRL")
+
+
+def test_provider_error_keeps_safe_diagnostics():
+    with pytest.raises(mercadopago_service.MercadoPagoServiceError) as error:
+        mercadopago_service._checked(
+            {
+                "status": 400,
+                "response": {
+                    "error": "bad_request",
+                    "message": "Invalid card token",
+                    "cause": [
+                        {
+                            "code": 2006,
+                            "description": "Card token is invalid",
+                            "card_token_id": "must-not-be-logged",
+                        }
+                    ],
+                },
+            }
+        )
+
+    assert "HTTP 400" in str(error.value)
+    assert "bad_request" in str(error.value)
+    assert "2006: Card token is invalid" in str(error.value)
+    assert "must-not-be-logged" not in str(error.value)
 
 
 def test_create_subscription_uses_backend_price_and_creates_pending(

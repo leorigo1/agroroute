@@ -195,6 +195,8 @@ e `/api/fields` no domínio público.
 
 Configure no projeto Vercel:
 
+- `FRONTEND_URL`: origem pública do frontend usada no retorno do checkout e na
+  URL do webhook; em produção, use `https://agroroute.vercel.app`.
 - `FRONTEND_ORIGINS`: origem exata do frontend, por exemplo
   `https://agroroute.vercel.app` (já permitida por padrão; valores configurados
   são adicionados às origens padrão). Para mais de uma origem, separe-as por

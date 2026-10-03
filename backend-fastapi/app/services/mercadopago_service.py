@@ -14,6 +14,37 @@ class MercadoPagoServiceError(RuntimeError):
     pass
 
 
+def _diagnostic_text(value: Any) -> str | None:
+    if not isinstance(value, (str, int)):
+        return None
+    text = " ".join(str(value).split())
+    return text[:240] or None
+
+
+def _provider_error_detail(response: Any) -> str:
+    if not isinstance(response, dict):
+        return ""
+
+    details = [
+        f"{key}={text}"
+        for key in ("error", "message")
+        if (text := _diagnostic_text(response.get(key))) is not None
+    ]
+    causes = response.get("cause")
+    if isinstance(causes, dict):
+        causes = [causes]
+    if isinstance(causes, list):
+        for cause in causes[:5]:
+            if not isinstance(cause, dict):
+                continue
+            code = _diagnostic_text(cause.get("code"))
+            description = _diagnostic_text(cause.get("description"))
+            if code or description:
+                details.append(": ".join(part for part in (code, description) if part))
+
+    return f" ({'; '.join(details)})" if details else ""
+
+
 def _sdk() -> mercadopago.SDK:
     access_token = os.getenv("MP_ACCESS_TOKEN", "").strip()
     if not access_token:
@@ -33,7 +64,8 @@ def _checked(result: dict[str, Any]) -> dict[str, Any]:
     status_code = result.get("status")
     if not isinstance(status_code, int) or not 200 <= status_code < 300:
         raise MercadoPagoServiceError(
-            f"Mercado Pago respondeu com HTTP {status_code}."
+            f"Mercado Pago respondeu com HTTP {status_code}"
+            f"{_provider_error_detail(response)}."
         )
     return _unwrap(result)
 
