@@ -4,28 +4,15 @@ import styles from './auth.module.css';
 
 function AgroRouteLogo() {
   return (
-    <div className={styles.logo} aria-label="AgroRoute">
-      <svg viewBox="0 0 48 48" aria-hidden="true" className={styles.logoMark}>
-        <path
-          d="M5 41 19.2 9.3a5.2 5.2 0 0 1 9.6 0L43 41h-9.1L24 19.7 14.1 41H5Z"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="5.2"
-          strokeLinejoin="round"
-        />
-        <path
-          d="m16.7 31.7 7.3-5 7.3 5"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="3.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-      <span>
-        Agro<span className={styles.logoAccent}>Route</span>
-      </span>
-    </div>
+    <Image
+      src="/agroroute-brand-logo.png"
+      alt="AgroRoute"
+      width={586}
+      height={356}
+      priority
+      unoptimized
+      className={styles.logo}
+    />
   );
 }
 
@@ -45,19 +32,64 @@ export default function AuthLayout({
         </div>
       </section>
 
-      <aside
-        className={styles.heroPanel}
-        aria-label="Rotas inteligentes para um campo mais eficiente"
-      >
+      <aside className={styles.heroPanel} aria-label="Tecnologia e geolocalização no campo">
         <Image
-          src="/agroroute-login-hero-hd.webp"
-          alt="Campo agrícola ao pôr do sol, com trator e rotas de precisão em verde"
+          src="/agroroute-login-hero-background.jpg"
+          alt=""
           fill
           priority
           unoptimized
           sizes="(max-width: 760px) 0px, 60vw"
           className={styles.heroImage}
         />
+        <div className={styles.heroContent}>
+          <div className={styles.heroCopy}>
+            <h2 className={styles.heroTitle}>
+              Rotas inteligentes
+              <br />
+              para um campo <span>mais eficiente.</span>
+            </h2>
+            <p className={styles.heroDescription}>
+              Tecnologia e geolocalização para otimizar
+              <br />o seu trabalho no campo.
+            </p>
+          </div>
+
+          <ul className={styles.heroBenefits} aria-label="Benefícios do AgroRoute">
+            <li className={styles.heroBenefit}>
+              <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                <circle cx="15" cy="17" r="10.5" />
+                <circle cx="15" cy="17" r="5.5" />
+                <path d="M15 17 24 8m-4 0h4v4M15 17l-2.5 6" />
+              </svg>
+              <span className={styles.benefitText}>
+                <strong>Mais precisão</strong>
+                <span>na aplicação</span>
+              </span>
+            </li>
+
+            <li className={styles.heroBenefit}>
+              <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                <path d="M8 5h13v22H8a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" />
+                <path d="M21 10h5l3 4v10h-8M11 9h7v8h-7zM24 27v-3m-16 3v-3" />
+              </svg>
+              <span className={styles.benefitText}>
+                <strong>Menos custos</strong>
+                <span>com insumos e combustível</span>
+              </span>
+            </li>
+
+            <li className={styles.heroBenefit}>
+              <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                <path d="M5 27h23M8 24v-7h5v7m3 0V12h5v12m3 0V6h5v18M7 12l7-5 5 3 8-7m-5 0h5v5" />
+              </svg>
+              <span className={styles.benefitText}>
+                <strong>Mais produtividade</strong>
+                <span>no seu talhão</span>
+              </span>
+            </li>
+          </ul>
+        </div>
       </aside>
     </main>
   );
