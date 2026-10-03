@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import Image from 'next/image';
+import HeroCarousel from './HeroCarousel';
 import styles from './auth.module.css';
 
 function AgroRouteLogo() {
@@ -33,15 +34,7 @@ export default function AuthLayout({
       </section>
 
       <aside className={styles.heroPanel} aria-label="Tecnologia e geolocalização no campo">
-        <Image
-          src="/agroroute-login-hero-background.jpg"
-          alt=""
-          fill
-          priority
-          unoptimized
-          sizes="(max-width: 760px) 0px, 60vw"
-          className={styles.heroImage}
-        />
+        <HeroCarousel />
         <div className={styles.heroContent}>
           <div className={styles.heroCopy}>
             <h2 className={styles.heroTitle}>
