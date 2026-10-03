@@ -75,26 +75,6 @@ function ArrowIcon() {
   );
 }
 
-function AppleIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M16.37 12.54c.02 2.1 1.84 2.8 1.86 2.81-.02.05-.29 1-.95 1.98-.57.85-1.17 1.7-2.1 1.72-.92.02-1.22-.55-2.28-.55-1.05 0-1.39.53-2.25.57-.9.04-1.6-.92-2.18-1.77-1.18-1.7-2.08-4.8-.87-6.88a3.37 3.37 0 0 1 2.85-1.73c.89-.02 1.72.6 2.27.6.55 0 1.58-.74 2.66-.63.45.02 1.72.18 2.53 1.37-.07.04-1.51.88-1.54 2.51Zm-1.75-5.01c.48-.58.8-1.38.71-2.18-.69.03-1.53.46-2.03 1.04-.45.52-.84 1.33-.73 2.1.77.06 1.57-.39 2.05-.96Z"
-      />
-    </svg>
-  );
-}
-
-function UserIcon() {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      <circle cx="10" cy="6" r="3" />
-      <path d="M3.5 17v-1.5a6.5 6.5 0 0 1 13 0V17h-13Z" />
-    </svg>
-  );
-}
-
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -297,28 +277,6 @@ export default function LoginPage() {
             <span>Login com Google não configurado</span>
           </button>
         )}
-        <button
-          className={styles.providerButton}
-          type="button"
-          disabled
-          title="Integração não disponível"
-        >
-          <span className={`${styles.providerIcon} ${styles.appleIcon}`}>
-            <AppleIcon />
-          </span>
-          <span>Continuar com Apple</span>
-        </button>
-        <button
-          className={`${styles.providerButton} ${styles.ssoButton}`}
-          type="button"
-          disabled
-          title="Integração não disponível"
-        >
-          <span className={`${styles.providerIcon} ${styles.ssoIcon}`}>
-            <UserIcon />
-          </span>
-          <span>Login único (SSO)</span>
-        </button>
       </div>
 
       <footer className={styles.footer}>

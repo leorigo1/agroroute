@@ -342,26 +342,6 @@
   height: 18px;
 }
 
-.appleIcon {
-  color: #f4f7f5;
-}
-
-.ssoButton {
-  min-height: 42px;
-  margin-top: 7px;
-}
-
-.ssoIcon {
-  color: #a7b2af;
-}
-
-.ssoIcon svg {
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.5;
-}
-
 .footer {
   display: grid;
   gap: 13px;
