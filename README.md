@@ -191,7 +191,8 @@ variável exigem um novo deploy para serem incluídas no bundle do frontend.
 No projeto Vercel da API, use `backend-fastapi/` como diretório raiz. Configure:
 
 - `FRONTEND_ORIGINS`: origem exata do frontend, por exemplo
-  `https://seu-projeto.vercel.app`. Para mais de uma origem, separe-as por vírgula.
+  `https://agroroute.vercel.app` (já permitida por padrão). Para mais de uma
+  origem, separe-as por vírgula.
 - `DATABASE_URL`: URL de conexão do banco PostgreSQL/PostGIS. Em Docker Compose,
   o valor local já aponta para o serviço `db`; em produção, use as credenciais e
   o endereço fornecidos por um provedor de banco compatível com PostGIS.

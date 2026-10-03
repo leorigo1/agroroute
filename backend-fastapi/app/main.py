@@ -21,7 +21,10 @@ app = FastAPI(title="AgroRoute API")
 
 frontend_origins = [
     origin.strip()
-    for origin in os.getenv("FRONTEND_ORIGINS", "http://localhost:3000").split(",")
+    for origin in os.getenv(
+        "FRONTEND_ORIGINS",
+        "http://localhost:3000,https://agroroute.vercel.app",
+    ).split(",")
     if origin.strip()
 ]
 
