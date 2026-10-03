@@ -54,6 +54,31 @@ def test_google_credential_verification_checks_configured_audience(monkeypatch):
     }
 
 
+def test_google_credential_reports_client_id_audience_mismatch(monkeypatch):
+    monkeypatch.setattr(auth_routes, "GOOGLE_CLIENT_ID", "backend-client-id")
+    monkeypatch.setattr(
+        auth_routes.id_token,
+        "verify_oauth2_token",
+        lambda *args, **kwargs: pytest.fail(
+            "Não deve validar token com audience já incompatível."
+        ),
+    )
+    credential = jwt.encode(
+        {
+            "aud": "different-frontend-client-id",
+            "exp": 1_900_000_000,
+        },
+        "untrusted-test-signing-key",
+        algorithm="HS256",
+    )
+
+    with pytest.raises(HTTPException) as error:
+        auth_routes._verify_google_credential(credential)
+
+    assert error.value.status_code == 401
+    assert "Client ID configurado no backend" in error.value.detail
+
+
 @pytest.mark.parametrize(
     "claims",
     [

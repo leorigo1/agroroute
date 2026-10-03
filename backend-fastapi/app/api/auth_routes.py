@@ -7,7 +7,7 @@ import secrets
 import google.auth.exceptions
 from google.auth.transport.requests import Request as GoogleRequest
 from google.oauth2 import id_token
-from jose import jwt
+from jose import JWTError, jwt
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.exc import IntegrityError
 
@@ -51,6 +51,24 @@ def _verify_google_credential(credential: str) -> dict:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Login com Google não está configurado.",
+        )
+
+    try:
+        unverified_claims = jwt.get_unverified_claims(credential)
+    except JWTError:
+        unverified_claims = {}
+
+    token_audience = unverified_claims.get("aud")
+    token_audiences = (
+        token_audience if isinstance(token_audience, list) else [token_audience]
+    )
+    if token_audience is not None and GOOGLE_CLIENT_ID not in token_audiences:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=(
+                "O Client ID configurado no backend é diferente do Client ID "
+                "que gerou a credencial do Google."
+            ),
         )
 
     try:
