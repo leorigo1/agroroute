@@ -11,7 +11,11 @@ DATABASE_URL = make_url(
         "postgresql://postgres:postgres@db:5432/agro_db",
     )
 )
-if DATABASE_URL.drivername in {"postgres", "postgresql"}:
+if DATABASE_URL.drivername in {
+    "postgres",
+    "postgresql",
+    "postgresql+psycopg",
+}:
     DATABASE_URL = DATABASE_URL.set(drivername="postgresql+psycopg2")
 
 engine = create_engine(

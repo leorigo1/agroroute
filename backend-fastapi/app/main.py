@@ -19,14 +19,20 @@ import os
 
 app = FastAPI(title="AgroRoute API")
 
-frontend_origins = [
+configured_frontend_origins = [
     origin.strip()
-    for origin in os.getenv(
-        "FRONTEND_ORIGINS",
-        "http://localhost:3000,https://agroroute.vercel.app",
-    ).split(",")
+    for origin in os.getenv("FRONTEND_ORIGINS", "").split(",")
     if origin.strip()
 ]
+frontend_origins = list(
+    dict.fromkeys(
+        [
+            "http://localhost:3000",
+            "https://agroroute.vercel.app",
+            *configured_frontend_origins,
+        ]
+    )
+)
 
 app.add_middleware(
     CORSMiddleware,
