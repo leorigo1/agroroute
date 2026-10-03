@@ -26,6 +26,23 @@ Configure no frontend:
 | --- | --- |
 | `NEXT_PUBLIC_MP_PUBLIC_KEY` | Public Key usada pelo MercadoPago.js para tokenizar o cartão. |
 
+## Login com Google
+
+O login usa Google Identity Services no navegador e envia o ID token diretamente
+para `POST /api/auth/google`. O backend verifica assinatura, validade e audience
+com `GOOGLE_CLIENT_ID`, aceita somente e-mails verificados e emite o mesmo JWT
+utilizado pelo login por senha.
+
+Configure o mesmo OAuth Client ID nas variáveis `GOOGLE_CLIENT_ID` do backend e
+`NEXT_PUBLIC_GOOGLE_CLIENT_ID` do frontend. Cadastre as origens do app (por
+exemplo, `http://localhost:3000` e o domínio de produção) nas origens JavaScript
+autorizadas do cliente OAuth no Google Cloud Console. O fluxo de ID token não
+usa Client Secret no navegador nem precisa dele no backend.
+
+Configure essas variáveis no ambiente de deploy e reinicie/recompile os serviços
+após a alteração. Se um Client Secret tiver sido compartilhado ou exposto,
+revogue-o e gere outro no Google Cloud Console; não o armazene no repositório.
+
 Os arquivos `backend-fastapi/.env.example` e `frontend/.env.example` contêm
 somente nomes e valores de exemplo. Não coloque Access Token nem Webhook Secret
 em `NEXT_PUBLIC_*`, no Git ou na documentação.

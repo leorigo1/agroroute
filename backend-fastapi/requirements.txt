@@ -13,3 +13,4 @@ pydantic[email]
 pytest
 pytest-asyncio
 mercadopago==3.6.0
+google-auth

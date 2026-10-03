@@ -312,6 +312,21 @@
   color: #f5f7f6;
 }
 
+.googleButtonContainer {
+  display: flex;
+  width: 100%;
+  min-height: 42px;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.googleLoading {
+  margin: 0;
+  color: #a7b0ae;
+  font-size: 11px;
+  text-align: center;
+}
+
 .providerIcon {
   position: absolute;
   left: 15px;

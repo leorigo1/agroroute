@@ -1,12 +1,43 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { login } from '@/features/auth/authService';
+import Script from 'next/script';
+import { login, loginWithGoogle, LoginResponse } from '@/features/auth/authService';
 import { reportUserLocationError, requestUserLocation } from '@/features/map/userLocation';
 import AuthLayout from '../AuthLayout';
 import styles from '../auth.module.css';
+
+type GoogleCredentialResponse = {
+  credential?: string;
+};
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (options: {
+            client_id: string;
+            callback: (response: GoogleCredentialResponse) => void;
+          }) => void;
+          renderButton: (
+            parent: HTMLElement,
+            options: {
+              theme: 'filled_black';
+              size: 'large';
+              text: 'continue_with';
+              shape: 'rect';
+              width: number;
+            },
+          ) => void;
+          cancel: () => void;
+        };
+      };
+    };
+  }
+}
 
 function MailIcon() {
   return (
@@ -44,29 +75,6 @@ function ArrowIcon() {
   );
 }
 
-function GoogleIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="#4285F4"
-        d="M21.6 12.23c0-.72-.06-1.42-.18-2.1H12v3.97h5.38a4.6 4.6 0 0 1-2 3.02v2.52h3.24c1.9-1.75 2.98-4.33 2.98-7.41Z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 22c2.7 0 4.97-.9 6.62-2.43l-3.24-2.52c-.9.6-2.05.96-3.38.96-2.6 0-4.8-1.76-5.59-4.13H3.06v2.6A10 10 0 0 0 12 22Z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M6.41 13.88a6.02 6.02 0 0 1 0-3.76v-2.6H3.06a10 10 0 0 0 0 8.96l3.35-2.6Z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 5.99c1.47 0 2.79.5 3.83 1.52l2.87-2.87C16.96 2.99 14.7 2 12 2a10 10 0 0 0-8.94 5.52l3.35 2.6C7.2 7.75 9.4 5.99 12 5.99Z"
-      />
-    </svg>
-  );
-}
-
 function AppleIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -92,8 +100,66 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleScriptReady, setGoogleScriptReady] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const googleButtonRef = useRef<HTMLDivElement>(null);
+  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+
+  const completeLogin = useCallback((data: LoginResponse) => {
+    localStorage.setItem('agroroute_token', data.access_token);
+    window.dispatchEvent(new Event('agroroute-auth-change'));
+    router.replace('/');
+    void requestUserLocation().catch((locationError: unknown) => {
+      const reportedError = reportUserLocationError(locationError);
+      console.error('Não foi possível obter a localização após o login:', reportedError);
+    });
+  }, [router]);
+
+  const handleGoogleCredential = useCallback(async (credential: string) => {
+    setError('');
+    setGoogleLoading(true);
+    try {
+      const data = await loginWithGoogle(credential);
+      completeLogin(data);
+    } catch (loginError) {
+      console.error('Não foi possível entrar com Google:', loginError);
+      setError('Não foi possível entrar com Google. Tente novamente.');
+    } finally {
+      setGoogleLoading(false);
+    }
+  }, [completeLogin]);
+
+  useEffect(() => {
+    const buttonHost = googleButtonRef.current;
+    const googleIdentity = window.google?.accounts.id;
+    if (!googleClientId || !googleScriptReady || !buttonHost || !googleIdentity) return;
+
+    buttonHost.replaceChildren();
+    googleIdentity.initialize({
+      client_id: googleClientId,
+      callback: (response) => {
+        if (response.credential) {
+          void handleGoogleCredential(response.credential);
+        } else {
+          setError('O Google não retornou uma credencial válida.');
+        }
+      },
+    });
+    googleIdentity.renderButton(buttonHost, {
+      theme: 'filled_black',
+      size: 'large',
+      text: 'continue_with',
+      shape: 'rect',
+      width: Math.min(buttonHost.clientWidth || 320, 400),
+    });
+
+    return () => {
+      window.google?.accounts.id.cancel();
+      buttonHost.replaceChildren();
+    };
+  }, [googleClientId, googleScriptReady, handleGoogleCredential]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -102,13 +168,7 @@ export default function LoginPage() {
 
     try {
       const data = await login({ email, password });
-      localStorage.setItem('agroroute_token', data.access_token);
-      window.dispatchEvent(new Event('agroroute-auth-change'));
-      router.replace('/');
-      void requestUserLocation().catch((locationError: unknown) => {
-        const reportedError = reportUserLocationError(locationError);
-        console.error('Não foi possível obter a localização após o login:', reportedError);
-      });
+      completeLogin(data);
     } catch (err) {
       console.error(err);
       setError('E-mail ou senha inválidos. Tente novamente.');
@@ -207,17 +267,36 @@ export default function LoginPage() {
       </div>
 
       <div className={styles.providers} aria-label="Outras formas de entrar">
-        <button
-          className={styles.providerButton}
-          type="button"
-          disabled
-          title="Integração não disponível"
-        >
-          <span className={`${styles.providerIcon} ${styles.googleIcon}`}>
-            <GoogleIcon />
-          </span>
-          <span>Continuar com Google</span>
-        </button>
+        {googleClientId ? (
+          <>
+            <Script
+              src="https://accounts.google.com/gsi/client"
+              strategy="afterInteractive"
+              onReady={() => setGoogleScriptReady(true)}
+              onError={() => setError('Não foi possível carregar o login do Google.')}
+            />
+            <div
+              ref={googleButtonRef}
+              className={styles.googleButtonContainer}
+              aria-label="Continuar com Google"
+              aria-busy={googleLoading}
+            />
+            {googleLoading ? (
+              <p className={styles.googleLoading} role="status">
+                Entrando com Google...
+              </p>
+            ) : null}
+          </>
+        ) : (
+          <button
+            className={styles.providerButton}
+            type="button"
+            disabled
+            title="Configure NEXT_PUBLIC_GOOGLE_CLIENT_ID"
+          >
+            <span>Login com Google não configurado</span>
+          </button>
+        )}
         <button
           className={styles.providerButton}
           type="button"
