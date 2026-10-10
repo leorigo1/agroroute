@@ -70,7 +70,14 @@ function ArrowIcon() {
 function Brand({ footer = false }: { footer?: boolean }) {
   return (
     <Link href="/" className={footer ? styles.footerBrand : styles.brand} aria-label="AgroRoute, início">
-      <Image src="/landing-logo-mark.png" alt="" width={42} height={30} priority />
+      <Image
+        src="/landing-logo-mark.png"
+        alt=""
+        width={42}
+        height={30}
+        priority
+        unoptimized
+      />
       <span>AgroRoute</span>
     </Link>
   );
@@ -190,6 +197,7 @@ export default function LandingPage() {
             height={912}
             className={styles.demoImage}
             sizes="(max-width: 900px) 100vw, 58vw"
+            unoptimized
           />
         </div>
       </section>

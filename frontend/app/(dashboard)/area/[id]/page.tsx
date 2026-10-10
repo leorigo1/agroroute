@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { FieldResponse, getField, getRoute, RouteResponse } from '@/features/fields/fieldService';
+import {
+  deleteField,
+  FieldResponse,
+  getField,
+  getRoute,
+  RouteResponse,
+} from '@/features/fields/fieldService';
 
 export default function AreaDetails() {
   const params = useParams<{ id: string }>();
@@ -12,6 +18,7 @@ export default function AreaDetails() {
   const [route, setRoute] = useState<RouteResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,6 +54,23 @@ export default function AreaDetails() {
     };
   }, [fieldId]);
 
+  async function handleDeleteArea() {
+    if (isDeleting || !window.confirm(`Excluir a área "${field?.name ?? 'selecionada'}" e sua rota? Essa ação não pode ser desfeita.`)) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setError(null);
+
+    try {
+      await deleteField(fieldId);
+      router.replace('/map');
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'Erro ao excluir área.');
+      setIsDeleting(false);
+    }
+  }
+
   return (
     <section className="flex flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -73,8 +97,17 @@ export default function AreaDetails() {
           </button>
           <button
             type="button"
+            onClick={() => void handleDeleteArea()}
+            disabled={isLoading || isDeleting || !field}
+            className="rounded border border-red-700 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:border-neutral-300 disabled:text-neutral-400 disabled:hover:bg-transparent"
+          >
+            {isDeleting ? 'Excluindo...' : 'Excluir área'}
+          </button>
+          <button
+            type="button"
             onClick={() => router.replace('/map')}
-            className="rounded border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100"
+            disabled={isDeleting}
+            className="rounded border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Voltar
           </button>

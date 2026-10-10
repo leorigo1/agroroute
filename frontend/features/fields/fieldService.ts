@@ -191,3 +191,14 @@ export async function getRoute(fieldId: string | number): Promise<RouteResponse 
   }
   return res.json();
 }
+
+export async function deleteField(fieldId: string | number): Promise<void> {
+  const res = await fetch(`${getApiUrl()}/fields/${fieldId}`, {
+    method: 'DELETE',
+    headers: getHeaders(),
+  });
+
+  if (!res.ok) {
+    throw await buildApiError(res, 'excluir área');
+  }
+}

@@ -66,7 +66,7 @@ export default function Map() {
 
       <MapResizeHandler />
       <UserLocationMap />
-      {pathname === '/' ? <HomeFieldsMap /> : null}
+      {pathname === '/map' ? <HomeFieldsMap /> : null}
       {areaDetailId ? <AreaDetailMap fieldId={areaDetailId} /> : null}
       <AreaSelectionMap />
     </MapContainer>
