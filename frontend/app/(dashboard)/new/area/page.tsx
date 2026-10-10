@@ -46,7 +46,7 @@ export default function NewArea() {
 
   useEffect(() => {
     if (saveStatus === 'saved') {
-      router.replace('/');
+      router.replace('/map');
     }
   }, [router, saveStatus]);
 
@@ -187,7 +187,7 @@ export default function NewArea() {
         </button>
         <button
           type="button"
-          onClick={() => {router.replace('/');}}
+          onClick={() => {router.replace('/map');}}
           className="rounded border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100"
         >
           Voltar

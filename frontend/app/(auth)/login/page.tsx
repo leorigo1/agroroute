@@ -90,7 +90,7 @@ export default function LoginPage() {
   const completeLogin = useCallback((data: LoginResponse) => {
     localStorage.setItem('agroroute_token', data.access_token);
     window.dispatchEvent(new Event('agroroute-auth-change'));
-    router.replace('/');
+    router.replace('/map');
     void requestUserLocation().catch((locationError: unknown) => {
       const reportedError = reportUserLocationError(locationError);
       console.error('Não foi possível obter a localização após o login:', reportedError);

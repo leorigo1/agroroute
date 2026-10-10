@@ -23,12 +23,12 @@ export default function Dashboard() {
           >
             Minha assinatura
           </Link>
-          <a
+          <Link
             href="/new/area"
             className="rounded bg-green-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-green-800"
           >
             Nova area
-          </a>
+          </Link>
           <LogoutButton />
         </div>
       </div>

@@ -90,7 +90,7 @@ export default function SubscriptionPage() {
     setError('');
     forgetPendingPixPayment();
     window.dispatchEvent(new Event(PREMIUM_ACCESS_UPDATED_EVENT));
-    window.setTimeout(() => router.replace('/'), 2000);
+    window.setTimeout(() => router.replace('/map'), 2000);
   }, [router]);
 
   const refreshSubscription = useCallback(async () => {
@@ -279,7 +279,7 @@ export default function SubscriptionPage() {
   return (
     <main className="mx-auto w-full max-w-3xl rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm sm:p-8">
       <Link
-        href="/"
+        href="/map"
         className="mb-5 inline-flex items-center gap-2 rounded-lg border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-800 transition hover:border-green-700 hover:bg-green-50 hover:text-green-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700"
       >
         <svg
