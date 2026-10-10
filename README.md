@@ -203,13 +203,21 @@ Configure no projeto Vercel:
   vírgula.
 - `DATABASE_URL`: URL de conexão do banco PostgreSQL/PostGIS. Em Docker Compose,
   o valor local já aponta para o serviço `db`; em produção, use as credenciais e
-  o endereço fornecidos por um provedor de banco compatível com PostGIS. Use uma
-  URL PostgreSQL padrão (`postgresql://...`); o backend seleciona o driver
-  `psycopg2` declarado nas dependências, inclusive se a URL recebida indicar
-  `postgresql+psycopg://`.
+  o endereço fornecidos por um provedor de banco compatível com PostGIS. Para
+  Supabase na Vercel, use a connection string **Shared pooler / Transaction**,
+  porta `6543`, por exemplo:
+  `postgresql://postgres.<project-ref>:<senha>@<host>.pooler.supabase.com:6543/postgres`.
+  Substitua os marcadores pelos valores do painel Supabase e configure a URL
+  somente como variável de ambiente; não a publique nem a envie em mensagens.
+  Se a senha tiver caracteres especiais, aplique percent-encoding nela. O backend
+  seleciona o driver `psycopg2` declarado nas dependências, inclusive se a URL
+  recebida indicar `postgresql+psycopg://`.
 
 O valor `DATABASE_URL` do Docker Compose usa o host interno `db` e não deve ser
-copiado para a Vercel. A API precisa de um banco PostGIS acessível pela Vercel.
+copiado para a Vercel. Evite a conexão direta ou o pooler em modo Session na
+Vercel; a aplicação limita cada instância a uma conexão simultânea do SQLAlchemy,
+mas a conexão Transaction é necessária para reduzir o risco de exceder o limite
+global do banco em ambiente serverless.
 
 ## Problemas comuns
 

@@ -20,7 +20,10 @@ if DATABASE_URL.drivername in {
 
 engine = create_engine(
     DATABASE_URL,
-    pool_pre_ping=True  # evita conexões mortas
+    pool_pre_ping=True,
+    pool_size=1,
+    max_overflow=0,
+    pool_timeout=10,
 )
 
 #  sessão

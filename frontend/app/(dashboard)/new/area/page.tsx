@@ -167,6 +167,17 @@ export default function NewArea() {
         >
           Nova selecao
         </button>
+        {selection?.isClosed ? (
+          <button
+            type="button"
+            onClick={startSelection}
+            className="rounded border border-red-300 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={saveStatus === 'saving'}
+            aria-label="Apagar área selecionada e começar novamente"
+          >
+            Apagar área
+          </button>
+        ) : null}
         <button
           type="submit"
           className="rounded bg-green-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-green-800 disabled:cursor-not-allowed disabled:bg-neutral-400"
