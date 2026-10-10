@@ -160,7 +160,7 @@
 
 .heroActions {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 13px;
   margin-top: 25px;
 }
