@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import Script from 'next/script';
+import MetaPixelPageView from './MetaPixelPageView';
 import './globals.css';
 import 'leaflet/dist/leaflet.css';
 
@@ -37,8 +38,7 @@ n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];
 s.parentNode.insertBefore(t,s)}(window, document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '1467721481886283');
-fbq('track', 'PageView');`}
+fbq('init', '1467721481886283');`}
         </Script>
       </head>
       <body className="min-h-full flex flex-col">
@@ -51,6 +51,7 @@ fbq('track', 'PageView');`}
             alt=""
           />
         </noscript>
+        <MetaPixelPageView />
         {children}
       </body>
     </html>
